@@ -1,0 +1,7 @@
+
+\.idea/
+
+env/
+results/
+
+__pycache__/
