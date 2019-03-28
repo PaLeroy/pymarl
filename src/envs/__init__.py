@@ -1,5 +1,6 @@
 from functools import partial
-from smac.env import MultiAgentEnv, StarCraft2Env
+from smac.env import MultiAgentEnv, StarCraft2Env, StarCraft2EnvMulti
+
 import sys
 import os
 
@@ -8,6 +9,7 @@ def env_fn(env, **kwargs) -> MultiAgentEnv:
 
 REGISTRY = {}
 REGISTRY["sc2"] = partial(env_fn, env=StarCraft2Env)
+REGISTRY["sc2multi.yaml"] = partial(env_fn, env=StarCraft2EnvMulti)
 
 if sys.platform == "linux":
     os.environ.setdefault("SC2PATH",
