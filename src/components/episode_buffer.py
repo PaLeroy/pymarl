@@ -116,6 +116,7 @@ class EpisodeBatch:
         for s in dest.shape[::-1]:
             if v.shape[idx] != s:
                 if s != 1:
+                    print("s, v, dest", s, v, dest)
                     raise ValueError("Unsafe reshape of {} to {}".format(v.shape, dest.shape))
             else:
                 idx -= 1

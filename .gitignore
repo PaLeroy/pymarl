@@ -1,7 +1,9 @@
 
 \.idea/
-
+3rdparty/
 env/
 results/
 
 __pycache__/
+
+SMAC\.egg-info/

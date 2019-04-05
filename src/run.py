@@ -17,7 +17,6 @@ from components.transforms import OneHot
 
 
 def run(_run, _config, _log):
-
     # check args sanity
     _config = args_sanity_check(_config, _log)
 
@@ -34,10 +33,12 @@ def run(_run, _config, _log):
     _log.info("\n\n" + experiment_params + "\n")
 
     # configure tensorboard logger
-    unique_token = "{}__{}".format(args.name, datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S"))
+    unique_token = "{}__{}".format(args.name, datetime.datetime.now().strftime(
+        "%Y-%m-%d_%H-%M-%S"))
     args.unique_token = unique_token
     if args.use_tensorboard:
-        tb_logs_direc = os.path.join(dirname(dirname(abspath(__file__))), "results", "tb_logs")
+        tb_logs_direc = os.path.join(dirname(dirname(abspath(__file__))),
+                                     "results", "tb_logs")
         tb_exp_direc = os.path.join(tb_logs_direc, "{}").format(unique_token)
         logger.setup_tb(tb_exp_direc)
 
@@ -64,7 +65,6 @@ def run(_run, _config, _log):
 
 
 def evaluate_sequential(args, runner):
-
     for _ in range(args.test_nepisode):
         runner.run(test_mode=True)
 
@@ -73,38 +73,74 @@ def evaluate_sequential(args, runner):
 
     runner.close_env()
 
-def run_sequential(args, logger):
 
+def run_sequential(args, logger):
     # Init runner so we can get env info
     runner = r_REGISTRY[args.runner](args=args, logger=logger)
 
     # Set up schemes and groups here
     env_info = runner.get_env_info()
-    args.n_agents = env_info["n_agents"]
+
+    if args.multi:
+        args.n_agents_team1 = env_info["n_agents"]
+        args.n_agents_team2 = env_info["n_enemies"]
+        args.n_agents = env_info["n_agents"] + env_info["n_enemies"]
+    else:
+        args.n_agents = env_info["n_agents"]
+
     args.n_actions = env_info["n_actions"]
     args.state_shape = env_info["state_shape"]
 
     # Default/Base scheme
-    scheme = {
-        "state": {"vshape": env_info["state_shape"]},
-        "obs": {"vshape": env_info["obs_shape"], "group": "agents"},
-        "actions": {"vshape": (1,), "group": "agents", "dtype": th.long},
-        "avail_actions": {"vshape": (env_info["n_actions"],), "group": "agents", "dtype": th.int},
-        "reward": {"vshape": (1,)},
-        "terminated": {"vshape": (1,), "dtype": th.uint8},
-    }
-    groups = {
-        "agents": args.n_agents
-    }
+    if args.multi:
+        scheme = {
+            "state": {"vshape": env_info["state_shape"]},
+            "obs_team_1": {"vshape": env_info["obs_shape"][0],
+                           "group": "agents_team_1"},
+            "obs_team_2": {"vshape": env_info["obs_shape"][1],
+                           "group": "agents_team_2"},
+            "actions": {"vshape": (1,), "group": "agents", "dtype": th.long},
+            "avail_actions": {"vshape": (env_info["n_actions"],),
+                              "group": "agents", "dtype": th.int},
+            "reward": {"vshape": (args.n_agents,)},
+            "terminated": {"vshape": (1,), "dtype": th.uint8},
+        }
+
+        groups = {
+            "agents": args.n_agents,
+            "agents_team_1": args.n_agents_team1,
+            "agents_team_2": args.n_agents_team2
+        }
+    else:
+        scheme = {
+            "state": {"vshape": env_info["state_shape"]},
+            "obs": {"vshape": env_info["obs_shape"], "group": "agents"},
+            "actions": {"vshape": (1,), "group": "agents", "dtype": th.long},
+            "avail_actions": {"vshape": (env_info["n_actions"],),
+                              "group": "agents", "dtype": th.int},
+            "reward": {"vshape": (1,) if not args.multi else (args.n_agents,)},
+            "terminated": {"vshape": (1,), "dtype": th.uint8},
+        }
+
+        groups = {
+            "agents": args.n_agents
+        }
     preprocess = {
         "actions": ("actions_onehot", [OneHot(out_dim=args.n_actions)])
     }
-
-    buffer = ReplayBuffer(scheme, groups, args.buffer_size, env_info["episode_limit"] + 1,
+    # print("scheme", scheme)
+    # print("groups", groups)
+    # print("preprocess", preprocess)
+    buffer = ReplayBuffer(scheme, groups, args.buffer_size,
+                          env_info["episode_limit"] + 1,
                           preprocess=preprocess,
                           device="cpu" if args.buffer_cpu_only else args.device)
 
+    print("bufferscheme", buffer.scheme)
+
     # Setup multiagent controller here
+    print(args.mac)
+    print(mac_REGISTRY[args.mac])
     mac = mac_REGISTRY[args.mac](buffer.scheme, groups, args)
 
     # Give runner the scheme
@@ -122,7 +158,9 @@ def run_sequential(args, logger):
         timestep_to_load = 0
 
         if not os.path.isdir(args.checkpoint_path):
-            logger.console_logger.info("Checkpoint directiory {} doesn't exist".format(args.checkpoint_path))
+            logger.console_logger.info(
+                "Checkpoint directiory {} doesn't exist".format(
+                    args.checkpoint_path))
             return
 
         # Go through all files in args.checkpoint_path
@@ -137,7 +175,8 @@ def run_sequential(args, logger):
             timestep_to_load = max(timesteps)
         else:
             # choose the timestep closest to load_step
-            timestep_to_load = min(timesteps, key=lambda x: abs(x - args.load_step))
+            timestep_to_load = min(timesteps,
+                                   key=lambda x: abs(x - args.load_step))
 
         model_path = os.path.join(args.checkpoint_path, str(timestep_to_load))
 
@@ -158,13 +197,22 @@ def run_sequential(args, logger):
     start_time = time.time()
     last_time = start_time
 
-    logger.console_logger.info("Beginning training for {} timesteps".format(args.t_max))
+    logger.console_logger.info(
+        "Beginning training for {} timesteps".format(args.t_max))
 
     while runner.t_env <= args.t_max:
 
         # Run for a whole episode at a time
         episode_batch = runner.run(test_mode=False)
         buffer.insert_episode_batch(episode_batch)
+        # print("---------------episode_batch:---------------")
+        # print('state', episode_batch['state'])
+        # print('obs', episode_batch['obs'])
+        # print('actions', episode_batch['actions'])
+        # print('avail_actions', episode_batch['avail_actions'])
+        # print('reward', episode_batch['reward'])
+        # print('terminated', episode_batch['terminated'])
+        # print('actions_onehot', episode_batch['actions_onehot'])
 
         if buffer.can_sample(args.batch_size):
             episode_sample = buffer.sample(args.batch_size)
@@ -182,19 +230,24 @@ def run_sequential(args, logger):
         n_test_runs = max(1, args.test_nepisode // runner.batch_size)
         if (runner.t_env - last_test_T) / args.test_interval >= 1.0:
 
-            logger.console_logger.info("t_env: {} / {}".format(runner.t_env, args.t_max))
-            logger.console_logger.info("Estimated time left: {}. Time passed: {}".format(
-                time_left(last_time, last_test_T, runner.t_env, args.t_max), time_str(time.time() - start_time)))
+            logger.console_logger.info(
+                "t_env: {} / {}".format(runner.t_env, args.t_max))
+            logger.console_logger.info(
+                "Estimated time left: {}. Time passed: {}".format(
+                    time_left(last_time, last_test_T, runner.t_env,
+                              args.t_max), time_str(time.time() - start_time)))
             last_time = time.time()
 
             last_test_T = runner.t_env
             for _ in range(n_test_runs):
                 runner.run(test_mode=True)
 
-        if args.save_model and (runner.t_env - model_save_time >= args.save_model_interval or model_save_time == 0):
+        if args.save_model and (
+                runner.t_env - model_save_time >= args.save_model_interval or model_save_time == 0):
             model_save_time = runner.t_env
-            save_path = os.path.join(args.local_results_path, "models", args.unique_token, str(runner.t_env))
-            #"results/models/{}".format(unique_token)
+            save_path = os.path.join(args.local_results_path, "models",
+                                     args.unique_token, str(runner.t_env))
+            # "results/models/{}".format(unique_token)
             os.makedirs(save_path, exist_ok=True)
             logger.console_logger.info("Saving models to {}".format(save_path))
 
@@ -214,16 +267,17 @@ def run_sequential(args, logger):
 
 
 def args_sanity_check(config, _log):
-
     # set CUDA flags
     # config["use_cuda"] = True # Use cuda whenever possible!
     if config["use_cuda"] and not th.cuda.is_available():
         config["use_cuda"] = False
-        _log.warning("CUDA flag use_cuda was switched OFF automatically because no CUDA devices are available!")
+        _log.warning(
+            "CUDA flag use_cuda was switched OFF automatically because no CUDA devices are available!")
 
     if config["test_nepisode"] < config["batch_size_run"]:
         config["test_nepisode"] = config["batch_size_run"]
     else:
-        config["test_nepisode"] = (config["test_nepisode"]//config["batch_size_run"]) * config["batch_size_run"]
+        config["test_nepisode"] = (config["test_nepisode"] // config[
+            "batch_size_run"]) * config["batch_size_run"]
 
     return config
