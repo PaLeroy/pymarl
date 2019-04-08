@@ -1,4 +1,4 @@
-
+*.sh
 \.idea/
 3rdparty/
 env/

@@ -25,5 +25,4 @@ name: "iql_smac_multiple"
 
 mac: "multi_mac"
 
-
-save_model_interval: 200000
+use_cuda: False

@@ -112,12 +112,12 @@ class MultiMAC(BasicMAC):
             agent.cuda()
 
     def save_models(self, path):
-        for idx, agent in enumerate(self.agent)s:
+        for idx, agent in enumerate(self.agents):
             th.save(agent.state_dict(),
                     "{}/agent_" + str(idx) + ".th".format(path))
 
     def load_models(self, path):
-        for idx, _ in enumerate(self.agent)s:
+        for idx, _ in enumerate(self.agents):
             self.agents[idx]. \
                 load_state_dict(
                 th.load("{}/agent_" + str(idx) + ".th".format(path),
