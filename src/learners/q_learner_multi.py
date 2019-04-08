@@ -216,9 +216,13 @@ class QLearnerMulti:
 
     def save_models(self, path):
         self.mac.save_models(path)
+        print(path)
         if self.mixer is not None:
             th.save(self.mixer.state_dict(), "{}/mixer.th".format(path))
-        th.save(self.optimiser.state_dict(), "{}/opt.th".format(path))
+        for idx, optimiser in enumerate(self.optimiser):
+            print("{}/opt".format(path) + str(idx) + ".th")
+            th.save(optimiser.state_dict(),
+                    "{}/opt".format(path) + str(idx) + ".th")
 
     def load_models(self, path):
         self.mac.load_models(path)
@@ -228,6 +232,8 @@ class QLearnerMulti:
             self.mixer.load_state_dict(th.load("{}/mixer.th".format(path),
                                                map_location=lambda storage,
                                                                    loc: storage))
-        self.optimiser.load_state_dict(th.load("{}/opt.th".format(path),
-                                               map_location=lambda storage,
-                                                                   loc: storage))
+        for idx, _ in enumerate(self.optimiser):
+            self.optimiser[idx].load_state_dict(
+                th.load("{}/opt".format(path) + str(idx) + ".th",
+                        map_location=lambda storage,
+                                            loc: storage))

@@ -27,3 +27,4 @@ mac: "multi_mac"
 
 
 save_model_interval: 200000
+save_model: True # Save the models to disk

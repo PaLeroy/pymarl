@@ -114,13 +114,13 @@ class MultiMAC(BasicMAC):
     def save_models(self, path):
         for idx, agent in enumerate(self.agents):
             th.save(agent.state_dict(),
-                    "{}/agent_" + str(idx) + ".th".format(path))
+                    "{}/agent_".format(path) + str(idx) + ".th")
 
     def load_models(self, path):
         for idx, _ in enumerate(self.agents):
             self.agents[idx]. \
                 load_state_dict(
-                th.load("{}/agent_" + str(idx) + ".th".format(path),
+                th.load("{}/agent_".format(path) + str(idx) + ".th",
                         map_location=lambda storage, loc: storage))
 
     def _build_agents(self, input_shape):
