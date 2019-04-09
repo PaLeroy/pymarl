@@ -216,7 +216,6 @@ class QLearnerMulti:
 
     def save_models(self, path):
         self.mac.save_models(path)
-        print(path)
         if self.mixer is not None:
             th.save(self.mixer.state_dict(), "{}/mixer.th".format(path))
         for idx, optimiser in enumerate(self.optimiser):
