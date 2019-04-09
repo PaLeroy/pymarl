@@ -3,8 +3,8 @@ from components.action_selectors import REGISTRY as action_REGISTRY
 import torch as th
 from controllers.basic_controller import BasicMAC
 
-
 import datetime
+
 
 class MultiMAC(BasicMAC):
     def __init__(self, scheme, groups, args):
@@ -42,7 +42,6 @@ class MultiMAC(BasicMAC):
                                                    avail_actions[bs],
                                                    t_env,
                                                    test_mode=test_mode))
-
 
         return th.cat(chosen_actions, 1)
 
