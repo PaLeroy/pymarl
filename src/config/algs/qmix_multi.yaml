@@ -25,3 +25,6 @@ mixing_embed_dim: 32
 name: "qmix_multi"
 mac: "multi_mac"
 use_cuda: False
+
+save_model_interval: 20000
+save_model: True # Save the models to disk
