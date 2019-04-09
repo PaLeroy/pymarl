@@ -228,7 +228,9 @@ class QLearnerMulti:
     def _update_targets(self):
         self.target_mac.load_state(self.mac)
         if self.mixer is not None:
-            self.target_mixer.load_state_dict(self.mixer.state_dict())
+            for idx, _ in enumerate(self.target_mixer):
+                self.target_mixer[idx].load_state_dict(
+                    self.mixer[idx].state_dict())
         self.logger.console_logger.info("Updated target network")
 
     def cuda(self):
@@ -240,11 +242,10 @@ class QLearnerMulti:
 
     def save_models(self, path):
         self.mac.save_models(path)
-        print(path)
-        if self.mixer is not None:
-            th.save(self.mixer.state_dict(), "{}/mixer.th".format(path))
         for idx, optimiser in enumerate(self.optimiser):
-            print("{}/opt".format(path) + str(idx) + ".th")
+            if self.mixer is not None:
+                th.save(self.mixer[idx].state_dict(),
+                        "{}/mixer".format(path) + str(idx) + ".th")
             th.save(optimiser.state_dict(),
                     "{}/opt".format(path) + str(idx) + ".th")
 
