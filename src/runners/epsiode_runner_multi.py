@@ -76,7 +76,6 @@ class EpisodeRunnerMulti(EpisodeRunner):
             self.t_env += self.t
 
         cur_returns.append(episode_return)
-
         if test_mode and (len(self.test_returns) == self.args.test_nepisode):
             self._log(cur_returns, cur_stats, log_prefix)
         elif self.t_env - self.log_train_stats_t >= self.args.runner_log_interval:
@@ -86,9 +85,13 @@ class EpisodeRunnerMulti(EpisodeRunner):
                                      self.mac.action_selector.epsilon,
                                      self.t_env)
             self.log_train_stats_t = self.t_env
+
         return self.batch
 
     def _log(self, returns, stats, prefix):
+        returns = np.array(returns)
+        returns = [returns[:, :self.args.n_agents_team1],
+                   returns[:, self.args.n_agents_team1:]]
         for idx, rets in enumerate(returns):
             self.logger.log_stat(prefix + "return_mean" + str(idx),
                                  np.mean(rets), self.t_env)
