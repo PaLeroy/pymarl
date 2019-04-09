@@ -2,6 +2,8 @@ import copy
 from components.episode_buffer import EpisodeBatch
 from modules.mixers.vdn import VDNMixer
 from modules.mixers.qmix import QMixer
+from modules.mixers.qmix_multi import QMixerMulti
+
 import torch as th
 from torch.optim import RMSprop
 
@@ -21,12 +23,22 @@ class QLearnerMulti:
         if args.mixer is not None:
             if args.mixer == "vdn":
                 self.mixer = VDNMixer()
+                self.params += list(self.mixer.parameters())
+                self.target_mixer = copy.deepcopy(self.mixer)
             elif args.mixer == "qmix":
                 self.mixer = QMixer(args)
+                self.params += list(self.mixer.parameters())
+                self.target_mixer = copy.deepcopy(self.mixer)
+            elif args.mixer == "qmix_multi":
+                self.mixer = [
+                    QMixerMulti(args, self.n_agents_team1),
+                    QMixerMulti(args, self.n_agents_team2)
+                ]
+                for idx, mixer in enumerate(self.mixer):
+                    self.params[idx] += list(mixer.parameters())
+                self.target_mixer = copy.deepcopy(self.mixer)
             else:
                 raise ValueError("Mixer {} not recognised.".format(args.mixer))
-            self.params += list(self.mixer.parameters())
-            self.target_mixer = copy.deepcopy(self.mixer)
 
         self.optimiser = [
             RMSprop(params=param, lr=args.lr, alpha=args.optim_alpha,
@@ -70,7 +82,7 @@ class QLearnerMulti:
             for mac_out_team_ in mac_out
         ]  # concat over time
 
-        # Pick the Q-Values for the actions taken by each agent
+        # Pick the Q-Values for the actions taken by each aent
 
         chosen_action_qvals = []
         for idx, mac_out_ in enumerate(mac_out):
@@ -127,10 +139,22 @@ class QLearnerMulti:
         # Mix
         # Todo
         if self.mixer is not None:
-            chosen_action_qvals = self.mixer(chosen_action_qvals,
-                                             batch["state"][:, :-1])
-            target_max_qvals = self.target_mixer(target_max_qvals,
-                                                 batch["state"][:, 1:])
+            if type(self.mixer) is list:
+                chosen_action_qvals = [
+                    mixer(chosen_action_qvals_, batch["state"][:, :-1])
+                    for mixer, chosen_action_qvals_ in
+                    zip(self.mixer, chosen_action_qvals)
+                ]
+                target_max_qvals = [
+                    target_mixer(target_max_qvals_, batch["state"][:, 1:])
+                    for target_mixer, target_max_qvals_ in
+                    zip(self.target_mixer, target_max_qvals)
+                ]
+            else:
+                chosen_action_qvals = self.mixer(chosen_action_qvals,
+                                                 batch["state"][:, :-1])
+                target_max_qvals = self.target_mixer(target_max_qvals,
+                                                     batch["state"][:, 1:])
 
         # Calculate 1-step Q-Learning targets
         targets = [
@@ -173,8 +197,8 @@ class QLearnerMulti:
                                                          self.args.grad_norm_clip))
             optimiser.step()
 
-        if (
-                episode_num - self.last_target_update_episode) / self.args.target_update_interval >= 1.0:
+        if (episode_num - self.last_target_update_episode) \
+                / self.args.target_update_interval >= 1.0:
             self._update_targets()
             self.last_target_update_episode = episode_num
 
