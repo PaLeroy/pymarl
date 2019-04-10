@@ -9,7 +9,6 @@ class EpisodeRunnerMulti(EpisodeRunner):
 
     def run(self, test_mode=False):
         self.reset()
-
         terminated = False
         episode_return = np.zeros(self.batch.scheme['reward']['vshape'])
 
@@ -85,14 +84,14 @@ class EpisodeRunnerMulti(EpisodeRunner):
                                      self.mac.action_selector.epsilon,
                                      self.t_env)
             self.log_train_stats_t = self.t_env
-
         return self.batch
 
     def _log(self, returns, stats, prefix):
-        returns = np.array(returns)
-        returns = [returns[:, :self.args.n_agents_team1],
-                   returns[:, self.args.n_agents_team1:]]
-        for idx, rets in enumerate(returns):
+        returns_ = np.array(returns)
+
+        returns_ = [returns_[:, :self.args.n_agents_team1],
+                    returns_[:, self.args.n_agents_team1:]]
+        for idx, rets in enumerate(returns_):
             self.logger.log_stat(prefix + "return_mean" + str(idx),
                                  np.mean(rets), self.t_env)
             self.logger.log_stat(prefix + "return_std" + str(idx),
