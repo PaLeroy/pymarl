@@ -237,8 +237,10 @@ class QLearnerMulti:
         self.mac.cuda()
         self.target_mac.cuda()
         if self.mixer is not None:
-            self.mixer.cuda()
-            self.target_mixer.cuda()
+            for mixer in self.mixer:
+                mixer.cuda()
+            for target_mixer in self.target_mixer:
+                target_mixer.cuda()
 
     def save_models(self, path):
         self.mac.save_models(path)
@@ -254,9 +256,11 @@ class QLearnerMulti:
         # Not quite right but I don't want to save target networks
         self.target_mac.load_models(path)
         if self.mixer is not None:
-            self.mixer.load_state_dict(th.load("{}/mixer.th".format(path),
-                                               map_location=lambda storage,
-                                                                   loc: storage))
+            for idx, _ in enumerate(self.mixer):
+                self.mixer[idx].load_state_dict(
+                    th.load("{}/mixer".format(path) + str(idx) + ".th",
+                            map_location=lambda storage,
+                                                loc: storage))
         for idx, _ in enumerate(self.optimiser):
             self.optimiser[idx].load_state_dict(
                 th.load("{}/opt".format(path) + str(idx) + ".th",

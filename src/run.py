@@ -128,19 +128,12 @@ def run_sequential(args, logger):
     preprocess = {
         "actions": ("actions_onehot", [OneHot(out_dim=args.n_actions)])
     }
-    # print("scheme", scheme)
-    # print("groups", groups)
-    # print("preprocess", preprocess)
     buffer = ReplayBuffer(scheme, groups, args.buffer_size,
                           env_info["episode_limit"] + 1,
                           preprocess=preprocess,
                           device="cpu" if args.buffer_cpu_only else args.device)
 
-    print("bufferscheme", buffer.scheme)
-
     # Setup multiagent controller here
-    print(args.mac)
-    print(mac_REGISTRY[args.mac])
     mac = mac_REGISTRY[args.mac](buffer.scheme, groups, args)
 
     # Give runner the scheme
@@ -167,9 +160,12 @@ def run_sequential(args, logger):
         for name in os.listdir(args.checkpoint_path):
             full_name = os.path.join(args.checkpoint_path, name)
             # Check if they are dirs the names of which are numbers
+            print(full_name)
+            print(name)
             if os.path.isdir(full_name) and name.isdigit():
                 timesteps.append(int(name))
 
+        print(timestep_to_load)
         if args.load_step == 0:
             # choose the max timestep
             timestep_to_load = max(timesteps)
@@ -205,14 +201,6 @@ def run_sequential(args, logger):
         # Run for a whole episode at a time
         episode_batch = runner.run(test_mode=False)
         buffer.insert_episode_batch(episode_batch)
-        # print("---------------episode_batch:---------------")
-        # print('state', episode_batch['state'])
-        # print('obs', episode_batch['obs'])
-        # print('actions', episode_batch['actions'])
-        # print('avail_actions', episode_batch['avail_actions'])
-        # print('reward', episode_batch['reward'])
-        # print('terminated', episode_batch['terminated'])
-        # print('actions_onehot', episode_batch['actions_onehot'])
 
         if buffer.can_sample(args.batch_size):
             episode_sample = buffer.sample(args.batch_size)
