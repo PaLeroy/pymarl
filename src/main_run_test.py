@@ -1,3 +1,12 @@
+import numpy as np
+from copy import deepcopy
+from sacred import Experiment, SETTINGS
+from sacred.observers import FileStorageObserver
+from sacred.utils import apply_backspaces_and_linefeeds
+import sys
+from utils.logging import get_logger
+import yaml
+
 import datetime
 import os
 import pprint
@@ -6,7 +15,6 @@ import threading
 import torch as th
 from types import SimpleNamespace as SN
 from utils.logging import Logger
-from utils.timehelper import time_left, time_str
 from os.path import dirname, abspath
 
 from learners import REGISTRY as le_REGISTRY
@@ -15,8 +23,32 @@ from controllers import REGISTRY as mac_REGISTRY
 from components.episode_buffer import ReplayBuffer
 from components.transforms import OneHot
 
+from main import _get_config, recursive_dict_update
+from run import args_sanity_check, evaluate_sequential
 
-def run(_run, _config, _log):
+SETTINGS[
+    'CAPTURE_MODE'] = "fd"  # set to "no" if you want to see stdout/stderr in console
+logger = get_logger()
+
+ex = Experiment("pymarl")
+ex.logger = logger
+ex.captured_out_filter = apply_backspaces_and_linefeeds
+
+results_path = os.path.join(dirname(dirname(abspath(__file__))), "results")
+
+
+@ex.main
+def my_main(_run, _config, _log, env_args):
+    # Setting the random seed throughout the modules
+    np.random.seed(_config["seed"])
+    th.manual_seed(_config["seed"])
+    env_args['seed'] = _config["seed"]
+
+    # run the framework
+    run_test(_run, _config, _log)
+
+
+def run_test(_run, _config, _log):
     # check args sanity
     _config = args_sanity_check(_config, _log)
 
@@ -46,7 +78,7 @@ def run(_run, _config, _log):
     logger.setup_sacred(_run)
 
     # Run and train
-    run_sequential(args=args, logger=logger)
+    run_sequential_test(args=args, logger=logger)
 
     # Clean up after finishing
     print("Exiting Main")
@@ -64,17 +96,7 @@ def run(_run, _config, _log):
     os._exit(os.EX_OK)
 
 
-def evaluate_sequential(args, runner):
-    for _ in range(args.test_nepisode):
-        runner.run(test_mode=True)
-
-    if args.save_replay:
-        runner.save_replay()
-
-    runner.close_env()
-
-
-def run_sequential(args, logger):
+def run_sequential_test(args, logger):
     # Init runner so we can get env info
     runner = r_REGISTRY[args.runner](args=args, logger=logger)
 
@@ -148,121 +170,69 @@ def run_sequential(args, logger):
     if args.checkpoint_path != "":
 
         timesteps = []
-        timestep_to_load = 0
 
         if not os.path.isdir(args.checkpoint_path):
             logger.console_logger.info(
                 "Checkpoint directiory {} doesn't exist".format(
                     args.checkpoint_path))
             return
-
         # Go through all files in args.checkpoint_path
         for name in os.listdir(args.checkpoint_path):
             full_name = os.path.join(args.checkpoint_path, name)
             # Check if they are dirs the names of which are numbers
             if os.path.isdir(full_name) and name.isdigit():
                 timesteps.append(int(name))
+        timesteps = sorted(timesteps)
+        for timestep_to_load in timesteps:
 
-        if args.load_step == 0:
-            # choose the max timestep
-            timestep_to_load = max(timesteps)
-        else:
-            # choose the timestep closest to load_step
-            timestep_to_load = min(timesteps,
-                                   key=lambda x: abs(x - args.load_step))
-
-        model_path = os.path.join(args.checkpoint_path, str(timestep_to_load))
-
-        logger.console_logger.info("Loading model from {}".format(model_path))
-        learner.load_models(model_path)
-        runner.t_env = timestep_to_load
-
-        if args.evaluate or args.save_replay:
-            evaluate_sequential(args, runner)
-            return
-
-    # start training
-    episode = 0
-    last_test_T = -args.test_interval - 1
-    last_log_T = 0
-    model_save_time = 0
-
-    start_time = time.time()
-    last_time = start_time
-
-    logger.console_logger.info(
-        "Beginning training for {} timesteps".format(args.t_max))
-
-    while runner.t_env <= args.t_max:
-
-        # Run for a whole episode at a time
-        episode_batch = runner.run(test_mode=False)
-        buffer.insert_episode_batch(episode_batch)
-
-        if buffer.can_sample(args.batch_size):
-            episode_sample = buffer.sample(args.batch_size)
-
-            # Truncate batch to only filled timesteps
-            max_ep_t = episode_sample.max_t_filled()
-            episode_sample = episode_sample[:, :max_ep_t]
-
-            if episode_sample.device != args.device:
-                episode_sample.to(args.device)
-
-            learner.train(episode_sample, runner.t_env, episode)
-
-        # Execute test runs once in a while
-        n_test_runs = max(1, args.test_nepisode // runner.batch_size)
-        if (runner.t_env - last_test_T) / args.test_interval >= 1.0:
+            model_path = os.path.join(args.checkpoint_path,
+                                      str(timestep_to_load))
 
             logger.console_logger.info(
-                "t_env: {} / {}".format(runner.t_env, args.t_max))
-            logger.console_logger.info(
-                "Estimated time left: {}. Time passed: {}".format(
-                    time_left(last_time, last_test_T, runner.t_env,
-                              args.t_max), time_str(time.time() - start_time)))
-            last_time = time.time()
+                "Loading model from {}".format(model_path))
+            learner.load_models(model_path)
+            runner.t_env = timestep_to_load
 
-            last_test_T = runner.t_env
-            for _ in range(n_test_runs):
-                runner.run(test_mode=True)
+            if args.evaluate or args.save_replay:
+                evaluate_sequential(args, runner)
+                return
 
-        if args.save_model and (
-                runner.t_env - model_save_time >= args.save_model_interval or model_save_time == 0):
-            model_save_time = runner.t_env
-            save_path = os.path.join(args.local_results_path, "models",
-                                     args.unique_token, str(runner.t_env))
-            # "results/models/{}".format(unique_token)
-            os.makedirs(save_path, exist_ok=True)
-            logger.console_logger.info("Saving models to {}".format(save_path))
+            for _ in range(args.n_epsiode_per_test):
+                # Run for a whole episode at a time
+                episode_batch = runner.run(test_mode=True)
 
-            # learner should handle saving/loading -- delegate actor save/load to mac,
-            # use appropriate filenames to do critics, optimizer states
-            learner.save_models(save_path)
+        runner.close_env()
+        logger.console_logger.info("Finished testing")
 
-        episode += args.batch_size_run
-
-        if (runner.t_env - last_log_T) >= args.log_interval:
-            logger.log_stat("episode", episode, runner.t_env)
-            logger.print_recent_stats()
-            last_log_T = runner.t_env
-
-    runner.close_env()
-    logger.console_logger.info("Finished Training")
-
-
-def args_sanity_check(config, _log):
-    # set CUDA flags
-    # config["use_cuda"] = True # Use cuda whenever possible!
-    if config["use_cuda"] and not th.cuda.is_available():
-        config["use_cuda"] = False
-        _log.warning(
-            "CUDA flag use_cuda was switched OFF automatically because no CUDA devices are available!")
-
-    if config["test_nepisode"] < config["batch_size_run"]:
-        config["test_nepisode"] = config["batch_size_run"]
     else:
-        config["test_nepisode"] = (config["test_nepisode"] // config[
-            "batch_size_run"]) * config["batch_size_run"]
+        logger.console_logger.info("Checkpoint directiory doesn't exist")
 
-    return config
+
+if __name__ == '__main__':
+    params = deepcopy(sys.argv)
+
+    # Get the defaults from default.yaml
+    with open(
+            os.path.join(os.path.dirname(__file__), "config", "default.yaml"),
+            "r") as f:
+        try:
+            config_dict = yaml.load(f)
+        except yaml.YAMLError as exc:
+            assert False, "default.yaml error: {}".format(exc)
+
+    # Load algorithm and env base configs
+    env_config = _get_config(params, "--env-config", "envs")
+    alg_config = _get_config(params, "--config", "algs")
+    # config_dict = {**config_dict, **env_config, **alg_config}
+    config_dict = recursive_dict_update(config_dict, env_config)
+    config_dict = recursive_dict_update(config_dict, alg_config)
+
+    # now add all the config to sacred
+    ex.add_config(config_dict)
+
+    # Save to disk by default for sacred
+    logger.info("Saving to FileStorageObserver in results/sacred.")
+    file_obs_path = os.path.join(results_path, "sacred")
+    ex.observers.append(FileStorageObserver.create(file_obs_path))
+
+    ex.run_commandline(params)
