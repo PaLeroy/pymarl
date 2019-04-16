@@ -205,7 +205,7 @@ def run_sequential_test(args, logger):
         logger.console_logger.info("Finished testing")
 
     else:
-        logger.console_logger.info("Checkpoint directiory doesn't exist")
+        logger.console_logger.info("Checkpoint directory doesn't exist")
 
 
 if __name__ == '__main__':

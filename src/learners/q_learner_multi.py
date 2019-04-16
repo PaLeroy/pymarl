@@ -137,7 +137,6 @@ class QLearnerMulti:
             ]
 
         # Mix
-        # Todo
         if self.mixer is not None:
             if type(self.mixer) is list:
                 chosen_action_qvals = [
