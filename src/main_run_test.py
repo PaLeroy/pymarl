@@ -183,8 +183,9 @@ def run_sequential_test(args, logger):
             if os.path.isdir(full_name) and name.isdigit():
                 timesteps.append(int(name))
         timesteps = sorted(timesteps)
-        for timestep_to_load in timesteps:
-
+        for idx_, timestep_to_load in enumerate(timesteps):
+            if idx_ % args.n_skip != 0:
+                continue
             model_path = os.path.join(args.checkpoint_path,
                                       str(timestep_to_load))
 

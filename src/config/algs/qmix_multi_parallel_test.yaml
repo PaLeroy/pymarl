@@ -30,5 +30,6 @@ use_cuda: False
 save_model_interval: 20000
 save_model: True # Save the models to disk
 
-checkpoint_path: "../results/models/qmix_multi_parallel_full_vision/" # Load a checkpoint from this path
+checkpoint_path: "../results/models/qmix_close__2019-04-17_15-15-01/" # Load a checkpoint from this path
 n_epsiode_per_test: 1
+n_skip: 3 # Skip "n_skip" networks each iteration
