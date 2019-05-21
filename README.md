@@ -1,5 +1,5 @@
 ```diff
-- This is a BETA release
+- This is a modified version of the original pymarl
 ```
 
 # Python MARL framework
