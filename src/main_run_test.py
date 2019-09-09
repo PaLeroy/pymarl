@@ -173,7 +173,7 @@ def run_sequential_test(args, logger):
 
         if not os.path.isdir(args.checkpoint_path):
             logger.console_logger.info(
-                "Checkpoint directiory {} doesn't exist".format(
+                "Checkpoint directory {} doesn't exist".format(
                     args.checkpoint_path))
             return
         # Go through all files in args.checkpoint_path
