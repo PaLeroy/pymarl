@@ -161,7 +161,7 @@ def run_population(args, logger):
             = le_REGISTRY[agent_dict[k]['args_sn'].learner](
             agent_dict[k]['mac'],
             buffer.scheme,
-            logger, agent_dict[k]['args_sn'])
+            logger, agent_dict[k]['args_sn'], id_agent=str(k))
         agent_dict[k]['t_total'] = 0
 
         if args.use_cuda:

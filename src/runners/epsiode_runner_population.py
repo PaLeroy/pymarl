@@ -163,14 +163,20 @@ class EpisodeRunnerPopulation(EpisodeRunner):
         cur_stats = self.test_stats if test_mode else self.train_stats
         cur_returns = self.test_returns if test_mode else self.train_returns
 
+        env_info_team1 = {"won": env_info["battle_won_team_1"]}
+        del env_info["battle_won_team_1"]
+        env_info_team2 = {"won": env_info["battle_won_team_2"]}
+        del env_info["battle_won_team_2"]
+
+
         cur_stats[self.team_id1].update(
             {k: cur_stats[self.team_id1].get(k, 0) + env_info.get(k, 0) for k
              in
-             set(cur_stats[self.team_id1]) | set(env_info)})
+             set(cur_stats[self.team_id1]) | set(env_info)| set(env_info_team1)})
         cur_stats[self.team_id2].update(
             {k: cur_stats[self.team_id2].get(k, 0) + env_info.get(k, 0) for k
              in
-             set(cur_stats[self.team_id2]) | set(env_info)})
+             set(cur_stats[self.team_id2]) | set(env_info)| set(env_info_team2)})
 
         cur_stats[self.team_id1]["n_episodes"] \
             = 1 + cur_stats[self.team_id1].get("n_episodes", 0)
@@ -204,12 +210,12 @@ class EpisodeRunnerPopulation(EpisodeRunner):
         if self.t_env - self.log_train_stats_t >= self.args.runner_log_interval:
             if hasattr(self.mac_team1.action_selector, "epsilon"):
                 self.logger.log_stat(
-                    "epsilon_id" + "agent_id_" + str(self.team_id1) + "_",
+                    "agent_id_" + str(self.team_id1) + "_epsilon",
                     self.mac_team1.action_selector.epsilon,
                     self.t_env)
             if hasattr(self.mac_team2.action_selector, "epsilon"):
                 self.logger.log_stat(
-                    "epsilon_id" + "agent_id_" + str(self.team_id2) + "_",
+                    "agent_id_" + str(self.team_id2) + "_epsilon",
                     self.mac_team1.action_selector.epsilon,
                     self.t_env)
 

@@ -7,11 +7,11 @@ from torch.optim import RMSprop
 
 
 class QLearner:
-    def __init__(self, mac, scheme, logger, args):
+    def __init__(self, mac, scheme, logger, args, id_agent=""):
         self.args = args
         self.mac = mac
         self.logger = logger
-
+        self.id_agent = id_agent if id_agent == "" else "agent_id_" + id_agent + "_"
         self.params = list(mac.parameters())
 
         self.last_target_update_episode = 0
@@ -107,12 +107,12 @@ class QLearner:
             self.last_target_update_episode = episode_num
 
         if t_env - self.log_stats_t >= self.args.learner_log_interval:
-            self.logger.log_stat("loss", loss.item(), t_env)
-            self.logger.log_stat("grad_norm", grad_norm, t_env)
+            self.logger.log_stat(str(self.id_agent) + "loss", loss.item(), t_env)
+            self.logger.log_stat(str(self.id_agent) + "grad_norm", grad_norm, t_env)
             mask_elems = mask.sum().item()
-            self.logger.log_stat("td_error_abs", (masked_td_error.abs().sum().item()/mask_elems), t_env)
-            self.logger.log_stat("q_taken_mean", (chosen_action_qvals * mask).sum().item()/(mask_elems * self.args.n_agents), t_env)
-            self.logger.log_stat("target_mean", (targets * mask).sum().item()/(mask_elems * self.args.n_agents), t_env)
+            self.logger.log_stat(str(self.id_agent) + "td_error_abs", (masked_td_error.abs().sum().item()/mask_elems), t_env)
+            self.logger.log_stat(str(self.id_agent) + "q_taken_mean", (chosen_action_qvals * mask).sum().item()/(mask_elems * self.args.n_agents), t_env)
+            self.logger.log_stat(str(self.id_agent) + "target_mean", (targets * mask).sum().item()/(mask_elems * self.args.n_agents), t_env)
             self.log_stats_t = t_env
 
     def _update_targets(self):
