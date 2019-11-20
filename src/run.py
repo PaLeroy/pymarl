@@ -11,9 +11,12 @@ from os.path import dirname, abspath
 
 from learners import REGISTRY as le_REGISTRY
 from runners import REGISTRY as r_REGISTRY
+from matchmaking import REGISTRY as m_REGISTRY
 from controllers import REGISTRY as mac_REGISTRY
 from components.episode_buffer import ReplayBuffer
 from components.transforms import OneHot
+
+from src.components.episode_buffer import ReplayBufferPopulation
 
 
 def run(_run, _config, _log):
@@ -46,7 +49,11 @@ def run(_run, _config, _log):
     logger.setup_sacred(_run)
 
     # Run and train
-    run_sequential(args=args, logger=logger)
+    if hasattr(args, 'runner_function'):
+        if args.runner_function == 'population':
+            run_population(args=args, logger=logger)
+    else:
+        run_sequential(args=args, logger=logger)
 
     # Clean up after finishing
     print("Exiting Main")
@@ -72,6 +79,171 @@ def evaluate_sequential(args, runner):
         runner.save_replay()
 
     runner.close_env()
+
+
+def run_population(args, logger):
+    # Creation of the agents dictionary
+    agent_dict = {}
+    agent_id = 0
+    for i in range(args.n_agent_type):
+        args_this_agent = args.__dict__["agent_type_" + str(i + 1)]
+        n_agent_this_type = args_this_agent['number']
+
+        assert n_agent_this_type == len(args_this_agent["save_model"])
+        save_model = args_this_agent["save_model"]
+
+        assert n_agent_this_type == len(args_this_agent["save_model_interval"])
+        save_model_interval = args_this_agent["save_model_interval"]
+
+        assert n_agent_this_type == len(args_this_agent["checkpoint_path"])
+        checkpoint_path = args_this_agent["checkpoint_path"]
+
+        assert n_agent_this_type == len(args_this_agent["load_step"])
+        load_step = args_this_agent["load_step"]
+
+        for j in range(n_agent_this_type):
+            args_this_agent_modified = args_this_agent.copy()
+            args_this_agent_modified["save_model"] = save_model[j]
+            args_this_agent_modified["save_model_interval"] = \
+                save_model_interval[j]
+            args_this_agent_modified["checkpoint_path"] = checkpoint_path[j]
+            args_this_agent_modified["load_step"] = load_step[j]
+            new_agent = {
+                'id': agent_id,
+                'args_sn': SN(**args_this_agent_modified)
+            }
+            agent_dict[agent_id] = new_agent
+            agent_id += 1
+
+    runner = r_REGISTRY[args.runner](args=args, logger=logger,
+                                     agent_dict=agent_dict)
+
+    env_info = runner.get_env_info()
+    # Take care that env info is made for 2 teams (-> obs is a tuple)
+
+    args.n_agents = env_info["n_agents"]
+    args.n_actions = env_info["n_actions"]
+    args.state_shape = env_info["state_shape"]
+
+    scheme_buffer = {
+        "state": {"vshape": env_info["state_shape"]},
+        "obs": {"vshape": env_info["obs_shape"][0], "group": "agents"},
+        "actions": {"vshape": (1,), "group": "agents", "dtype": th.long},
+        "avail_actions": {"vshape": (env_info["n_actions"],),
+                          "group": "agents", "dtype": th.int},
+        "reward": {"vshape": (1,)},
+        "terminated": {"vshape": (1,), "dtype": th.uint8},
+    }
+
+    groups = {
+        "agents": args.n_agents,
+    }
+    preprocess = {
+        "actions": ("actions_onehot", [OneHot(out_dim=args.n_actions)])
+    }
+
+    buffer = ReplayBufferPopulation(scheme_buffer,
+                                    groups,
+                                    args.buffer_size,
+                                    env_info["episode_limit"] + 1,
+                                    agent_dict,
+                                    preprocess=preprocess,
+                                    device="cpu"
+                                    if args.buffer_cpu_only else args.device)
+    for k, v in agent_dict.items():
+        agent_dict[k]['args_sn'].n_agents = env_info["n_agents"]
+        agent_dict[k]['args_sn'].n_actions = env_info["n_actions"]
+        agent_dict[k]['args_sn'].state_shape = env_info["state_shape"]
+        agent_dict[k]['mac'] = mac_REGISTRY[args.mac](buffer.scheme,
+                                                      groups,
+                                                      agent_dict[k]['args_sn'])
+        agent_dict[k]['leaner'] \
+            = le_REGISTRY[agent_dict[k]['args_sn'].learner](
+            agent_dict[k]['mac'],
+            buffer.scheme,
+            logger, agent_dict[k]['args_sn'])
+        agent_dict[k]['t_total'] = 0
+
+        if args.use_cuda:
+            agent_dict[k]['leaner'].cuda()
+
+        checkpoint_path_ = agent_dict[k]['args_sn'].checkpoint_path
+        if checkpoint_path_ != "":
+            timesteps = []
+
+            if not os.path.isdir(checkpoint_path_):
+                logger.console_logger.info(
+                    "Checkpoint directory {} doesn't exist".format(
+                        checkpoint_path_))
+                return
+
+            # Go through all files in args.checkpoint_path
+            for name in os.listdir(checkpoint_path_):
+                full_name = os.path.join(checkpoint_path_, name)
+                # Check if they are dirs the names of which are numbers
+                if os.path.isdir(full_name) and name.isdigit():
+                    timesteps.append(int(name))
+
+            if agent_dict[k]['args_sn'].load_step == 0:
+                # choose the max timestep
+                timestep_to_load = max(timesteps)
+            else:
+                # choose the timestep closest to load_step
+                timestep_to_load = min(timesteps,
+                                       key=lambda x: abs(x - agent_dict[k][
+                                           'args_sn'].load_step))
+
+            model_path = os.path.join(checkpoint_path_,
+                                      str(timestep_to_load))
+
+            logger.console_logger.info(
+                "Loading model from {}".format(model_path))
+            agent_dict[k]['leaner'].load_models(model_path)
+            agent_dict[k]['t_total'] = timestep_to_load
+
+            if args.evaluate or args.save_replay:
+                evaluate_sequential(args, runner)
+                return
+
+    match_maker = m_REGISTRY[args.matchmaking](agent_dict)
+
+    runner.setup(scheme=scheme_buffer, groups=groups, preprocess=preprocess)
+
+    # start training
+    episode = 0
+    last_test_T = -args.test_interval - 1
+    last_log_T = 0
+    model_save_time = 0
+
+    start_time = time.time()
+    last_time = start_time
+
+    logger.console_logger.info(
+        "Beginning training for {} timesteps".format(args.t_max))
+
+    while runner.t_env <= args.t_max:
+        # Run for a whole episode at a time
+        list_episode_matches = match_maker.list_combat(agent_dict)
+        runner.setup_agents(list_episode_matches, agent_dict)
+        episode_batches, total_times = runner.run(test_mode=False)
+
+        buffer.insert_episode_batch(episode_batches, agent_dict,
+                                    list_episode_matches)
+
+        list_agent_can_sample = buffer.can_sample(agent_dict)
+        if list_agent_can_sample:
+            for agent_id in list_agent_can_sample:
+                # Train agents that can be trained
+                episode_sample = buffer.sample(agent_id, agent_dict)
+                # Truncate batch to only filled timesteps
+                max_ep_t = episode_sample.max_t_filled()
+                episode_sample = episode_sample[:, :max_ep_t]
+
+                if episode_sample.device != args.device:
+                    episode_sample.to(args.device)
+
+                agent_dict[agent_id]['leaner'].train(episode_sample,
+                                                     runner.t_env, episode)
 
 
 def run_sequential(args, logger):
@@ -128,6 +300,7 @@ def run_sequential(args, logger):
     preprocess = {
         "actions": ("actions_onehot", [OneHot(out_dim=args.n_actions)])
     }
+
     buffer = ReplayBuffer(scheme, groups, args.buffer_size,
                           env_info["episode_limit"] + 1,
                           preprocess=preprocess,

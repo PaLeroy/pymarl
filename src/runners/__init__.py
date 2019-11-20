@@ -12,3 +12,6 @@ REGISTRY["episode_multi"] = EpisodeRunnerMulti
 
 from .parallel_runner_multi import ParallelRunnerMulti
 REGISTRY["parallel_multi"] = ParallelRunnerMulti
+
+from .epsiode_runner_population import EpisodeRunnerPopulation
+REGISTRY["episode_runner_population"] = EpisodeRunnerPopulation
