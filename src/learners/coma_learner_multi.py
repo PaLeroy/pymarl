@@ -160,7 +160,7 @@ class COMALearnerMulti:
                                      t_env)
                 self.logger.log_stat("coma_loss_" + str(idx + 1),
                                      coma_loss.item(), t_env)
-                self.logger.log_stat("agent_grad_norm_" + str(idx + 1),
+                self.logger.log_stat("grad_norm_" + str(idx + 1),
                                      grad_norm, t_env)
                 self.logger.log_stat("pi_max_" + str(idx + 1),
                                      (pi.max(dim=1)[

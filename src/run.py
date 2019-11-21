@@ -157,15 +157,16 @@ def run_population(args, logger):
         agent_dict[k]['mac'] = mac_REGISTRY[args.mac](buffer.scheme,
                                                       groups,
                                                       agent_dict[k]['args_sn'])
-        agent_dict[k]['leaner'] \
+        agent_dict[k]['learner'] \
             = le_REGISTRY[agent_dict[k]['args_sn'].learner](
             agent_dict[k]['mac'],
             buffer.scheme,
             logger, agent_dict[k]['args_sn'], id_agent=str(k))
         agent_dict[k]['t_total'] = 0
+        agent_dict[k]['model_save_time'] = 0
 
         if args.use_cuda:
-            agent_dict[k]['leaner'].cuda()
+            agent_dict[k]['learner'].cuda()
 
         checkpoint_path_ = agent_dict[k]['args_sn'].checkpoint_path
         if checkpoint_path_ != "":
@@ -198,7 +199,7 @@ def run_population(args, logger):
 
             logger.console_logger.info(
                 "Loading model from {}".format(model_path))
-            agent_dict[k]['leaner'].load_models(model_path)
+            agent_dict[k]['learner'].load_models(model_path)
             agent_dict[k]['t_total'] = timestep_to_load
 
             if args.evaluate or args.save_replay:
@@ -213,7 +214,6 @@ def run_population(args, logger):
     episode = 0
     last_test_T = -args.test_interval - 1
     last_log_T = 0
-    model_save_time = 0
 
     start_time = time.time()
     last_time = start_time
@@ -246,22 +246,27 @@ def run_population(args, logger):
                 if episode_sample.device != args.device:
                     episode_sample.to(args.device)
 
-                agent_dict[agent_id]['leaner'].train(episode_sample,
-                                                     runner.t_env, episode)
+                agent_dict[agent_id]['learner'].train(episode_sample,
+                                                      runner.t_env, episode)
+        for agent_id, dict___ in agent_dict.items():
+            if dict___['args_sn'].save_model \
+                    and (dict___['t_total'] - dict___['model_save_time']
+                         >= dict___['args_sn'].save_model_interval
+                         or dict___['model_save_time'] == 0):
+                agent_dict[agent_id]['model_save_time'] \
+                    = agent_dict[agent_id]['t_total']
 
-        # if args.save_model and (
-        #         runner.t_env - model_save_time >= args.save_model_interval or model_save_time == 0):
-        #     model_save_time = runner.t_env
-        #     save_path = os.path.join(args.local_results_path, "models",
-        #                              args.unique_token, str(runner.t_env))
-        #     # "results/models/{}".format(unique_token)
-        #     os.makedirs(save_path, exist_ok=True)
-        #     logger.console_logger.info("Saving models to {}".format(save_path))
-        #
-        #     # learner should handle saving/loading -- delegate actor save/load to mac,
-        #     # use appropriate filenames to do critics, optimizer states
-        #     learner.save_models(save_path)
-        #
+                save_path = os.path.join(args.local_results_path, "models",
+                                         args.unique_token,
+                                         "agent_id_" + str(agent_id),
+                                         str(runner.t_env))
+
+                os.makedirs(save_path, exist_ok=True)
+                logger.console_logger.info(
+                    "Saving models to {}".format(save_path))
+
+                agent_dict[agent_id]['learner'].save_models(save_path)
+
         episode += args.batch_size_run
         #
         # if (runner.t_env - last_log_T) >= args.log_interval:
