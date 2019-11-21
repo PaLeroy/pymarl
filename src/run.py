@@ -227,6 +227,10 @@ def run_population(args, logger):
         runner.setup_agents(list_episode_matches, agent_dict)
         episode_batches, total_times = runner.run(test_mode=False)
 
+        for idx_, match in enumerate(list_episode_matches):
+            for idx2_, agent_id in enumerate(match):
+                agent_dict[agent_id]['t_total'] = total_times[idx_][idx2_]
+
         buffer.insert_episode_batch(episode_batches, agent_dict,
                                     list_episode_matches)
 
@@ -244,6 +248,26 @@ def run_population(args, logger):
 
                 agent_dict[agent_id]['leaner'].train(episode_sample,
                                                      runner.t_env, episode)
+
+        # if args.save_model and (
+        #         runner.t_env - model_save_time >= args.save_model_interval or model_save_time == 0):
+        #     model_save_time = runner.t_env
+        #     save_path = os.path.join(args.local_results_path, "models",
+        #                              args.unique_token, str(runner.t_env))
+        #     # "results/models/{}".format(unique_token)
+        #     os.makedirs(save_path, exist_ok=True)
+        #     logger.console_logger.info("Saving models to {}".format(save_path))
+        #
+        #     # learner should handle saving/loading -- delegate actor save/load to mac,
+        #     # use appropriate filenames to do critics, optimizer states
+        #     learner.save_models(save_path)
+        #
+        episode += args.batch_size_run
+        #
+        # if (runner.t_env - last_log_T) >= args.log_interval:
+        #     logger.log_stat("episode", episode, runner.t_env)
+        #     logger.print_recent_stats()
+        #     last_log_T = runner.t_env
 
 
 def run_sequential(args, logger):

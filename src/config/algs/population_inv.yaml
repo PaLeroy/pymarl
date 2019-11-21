@@ -6,7 +6,7 @@ runner_function: "population"
 runner: "episode_runner_population"
 batch_size_run: 1
 
-name: "population_duo"
+name: "population_inv"
 
 mac: "basic_mac"
 use_cuda: False
@@ -23,7 +23,7 @@ n_agent_type: 2
 log_interval: 20
 runner_log_interval: 20
 learner_log_interval: 20
-agent_type_1:
+agent_type_2:
   number: 1 # number of agent of this type in the population
 
   action_selector: "epsilon_greedy"
@@ -66,7 +66,7 @@ agent_type_1:
   checkpoint_path: [""] # Load a checkpoint from this path
   load_step: [0] # Load model trained on this many timesteps (0 if choose max possible)
 
-agent_type_2:
+agent_type_1:
   number: 1
 
   action_selector: "multinomial"
