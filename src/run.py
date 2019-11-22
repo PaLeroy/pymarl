@@ -247,7 +247,7 @@ def run_population(args, logger):
                     episode_sample.to(args.device)
 
                 agent_dict[agent_id]['learner'].train(episode_sample,
-                                                      runner.t_env, episode)
+                                                      agent_dict[agent_id]['t_total'], episode)
         for agent_id, dict___ in agent_dict.items():
             if dict___['args_sn'].save_model \
                     and (dict___['t_total'] - dict___['model_save_time']
@@ -259,7 +259,7 @@ def run_population(args, logger):
                 save_path = os.path.join(args.local_results_path, "models",
                                          args.unique_token,
                                          "agent_id_" + str(agent_id),
-                                         str(runner.t_env))
+                                         str(agent_dict[agent_id]['t_total']))
 
                 os.makedirs(save_path, exist_ok=True)
                 logger.console_logger.info(

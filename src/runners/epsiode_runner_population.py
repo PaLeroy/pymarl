@@ -162,11 +162,14 @@ class EpisodeRunnerPopulation(EpisodeRunner):
 
         cur_stats = self.test_stats if test_mode else self.train_stats
         cur_returns = self.test_returns if test_mode else self.train_returns
-
-        env_info_team1 = {"won": env_info["battle_won_team_1"]}
-        del env_info["battle_won_team_1"]
-        env_info_team2 = {"won": env_info["battle_won_team_2"]}
-        del env_info["battle_won_team_2"]
+        env_info_team1 = {}
+        if "battle_won_team_1" in env_info:
+            env_info_team1 = {"won": env_info["battle_won_team_1"]}
+            del env_info["battle_won_team_1"]
+        env_info_team2 = {}
+        if "battle_won_team_2" in env_info:
+            env_info_team2 = {"won": env_info["battle_won_team_2"]}
+            del env_info["battle_won_team_2"]
 
         cur_stats[self.team_id1].update(
             {k: cur_stats[self.team_id1].get(k, 0) + env_info.get(k, 0) for k

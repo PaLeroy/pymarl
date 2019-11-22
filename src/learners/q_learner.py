@@ -119,7 +119,12 @@ class QLearner:
         self.target_mac.load_state(self.mac)
         if self.mixer is not None:
             self.target_mixer.load_state_dict(self.mixer.state_dict())
-        self.logger.console_logger.info("Updated target network")
+        if self.id_agent == "":
+            self.logger.console_logger.info("Updated target network")
+        else:
+            self.logger.console_logger.info(
+                "Updated target network of agent_id=" + str(
+                    self.id_agent[:-1]))
 
     def cuda(self):
         self.mac.cuda()

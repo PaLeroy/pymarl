@@ -92,8 +92,8 @@ class COMALearner:
                                                 self.args.grad_norm_clip)
         self.agent_optimiser.step()
 
-        if (
-                self.critic_training_steps - self.last_target_update_step) / self.args.target_update_interval >= 1.0:
+        if (self.critic_training_steps - self.last_target_update_step)\
+                / self.args.target_update_interval >= 1.0:
             self._update_targets()
             self.last_target_update_step = self.critic_training_steps
 
@@ -153,7 +153,6 @@ class COMALearner:
             q_taken = th.gather(q_t, dim=3, index=actions[:, t:t + 1]).squeeze(
                 3).squeeze(1)
             targets_t = targets[:, t]
-
             td_error = (q_taken - targets_t.detach())
 
             # 0-out the targets that came from padded data
