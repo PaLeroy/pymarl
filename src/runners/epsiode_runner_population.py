@@ -72,6 +72,7 @@ class EpisodeRunnerPopulation(EpisodeRunner):
         self.mac_team2.init_hidden(batch_size=self.batch_size)
 
         while not terminated:
+
             observations = self.env.get_obs()
             obs_team_1 = observations[:self.args.n_agents]
             obs_team_2 = observations[self.args.n_agents:]
@@ -115,7 +116,7 @@ class EpisodeRunnerPopulation(EpisodeRunner):
             }
             post_transition_data_team_2 = {
                 "actions": actions_team_2,
-                "reward": [(reward[1],)],
+                "reward": [(reward[-1],)],
                 "terminated": [
                     (terminated != env_info.get("episode_limit", False),)],
             }
