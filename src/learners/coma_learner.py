@@ -165,7 +165,7 @@ class COMALearner:
             grad_norm = th.nn.utils.clip_grad_norm_(self.critic_params,
                                                     self.args.grad_norm_clip)
             self.critic_optimiser.step()
-            self.critic_training_steps += 1
+
 
             running_log[str(self.id_agent) + "critic_loss"].append(loss.item())
             running_log[str(self.id_agent) + "critic_grad_norm"].append(
@@ -177,7 +177,7 @@ class COMALearner:
                 (q_taken * mask_t).sum().item() / mask_elems)
             running_log[str(self.id_agent) + "target_mean"].append(
                 (targets_t * mask_t).sum().item() / mask_elems)
-
+        self.critic_training_steps += 1
         return q_vals, running_log
 
     def _update_targets(self):
