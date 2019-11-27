@@ -28,7 +28,11 @@ class DoNothingMAC:
                 else:
                     chosen_actions_.append(0)
             chosen_actions.append(chosen_actions_)
-        return th.LongTensor(chosen_actions)
+        if self.args.use_cuda:
+            chosen_actions = th.cuda.LongTensor(chosen_actions)
+        else:
+            chosen_actions = th.LongTensor(chosen_actions)
+        return chosen_actions
 
     def forward(self, ep_batch, t, test_mode=False):
         agent_inputs = self._build_inputs(ep_batch, t)
