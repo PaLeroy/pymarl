@@ -154,9 +154,10 @@ def run_population(args, logger):
         agent_dict[k]['args_sn'].n_agents = env_info["n_agents"]
         agent_dict[k]['args_sn'].n_actions = env_info["n_actions"]
         agent_dict[k]['args_sn'].state_shape = env_info["state_shape"]
-        agent_dict[k]['mac'] = mac_REGISTRY[args.mac](buffer.scheme,
-                                                      groups,
-                                                      agent_dict[k]['args_sn'])
+        agent_dict[k]['mac'] = mac_REGISTRY[agent_dict[k]['args_sn'].mac](
+            buffer.scheme,
+            groups,
+            agent_dict[k]['args_sn'])
         agent_dict[k]['learner'] \
             = le_REGISTRY[agent_dict[k]['args_sn'].learner](
             agent_dict[k]['mac'],
@@ -247,7 +248,8 @@ def run_population(args, logger):
                     episode_sample.to(args.device)
 
                 agent_dict[agent_id]['learner'].train(episode_sample,
-                                                      agent_dict[agent_id]['t_total'], episode)
+                                                      agent_dict[agent_id][
+                                                          't_total'], episode)
         for agent_id, dict___ in agent_dict.items():
             if dict___['args_sn'].save_model \
                     and (dict___['t_total'] - dict___['model_save_time']

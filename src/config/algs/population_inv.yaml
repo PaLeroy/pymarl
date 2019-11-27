@@ -8,7 +8,7 @@ batch_size_run: 1
 
 name: "population_inv"
 
-mac: "basic_mac"
+
 use_cuda: False
 
 matchmaking: "duo"
@@ -25,7 +25,7 @@ runner_log_interval: 20
 learner_log_interval: 20
 agent_type_2:
   number: 1 # number of agent of this type in the population
-
+  mac: "basic_mac"
   action_selector: "epsilon_greedy"
   epsilon_start: 1.0
   epsilon_finish: 0.05
@@ -68,7 +68,7 @@ agent_type_2:
 
 agent_type_1:
   number: 1
-
+  mac: "basic_mac"
   action_selector: "multinomial"
   epsilon_start: .5
   epsilon_finish: .01
