@@ -154,6 +154,7 @@ def run_population(args, logger):
         agent_dict[k]['args_sn'].n_agents = env_info["n_agents"]
         agent_dict[k]['args_sn'].n_actions = env_info["n_actions"]
         agent_dict[k]['args_sn'].state_shape = env_info["state_shape"]
+        agent_dict[k]['args_sn'].use_cuda = args.use_cuda
         agent_dict[k]['mac'] = mac_REGISTRY[agent_dict[k]['args_sn'].mac](
             buffer.scheme,
             groups,
