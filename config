@@ -1,0 +1,2 @@
+--config=qmix --env-config=sc2 with env_args.map_name=3m
+--config=population --env-config=sc2_multi with env_args.map_name=3m_multi

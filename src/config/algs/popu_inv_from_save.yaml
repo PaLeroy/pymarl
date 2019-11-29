@@ -63,12 +63,12 @@ agent_type_2:
   # --- Logging options ---
   save_model: [True] # Save the models to disk
   save_model_interval: [200000] # Save models after this many timesteps
-  checkpoint_path: ["results/models_from_vega/population_inv__2019-11-25_18-47-58/agent_id_1/"] # Load a checkpoint from this path
-  load_step: [3600217] # Load model trained on this many timesteps (0 if choose max possible)
+  checkpoint_path: ["results/models_from_vega/population_inv__2019-11-27_18-08-43/agent_id_1/"] # Load a checkpoint from this path
+  load_step: [600097] # Load model trained on this many timesteps (0 if choose max possible)
 
 agent_type_1:
   number: 1
-  mac: "basic_mac"
+  mac: "do_not_mac"
   action_selector: "multinomial"
   epsilon_start: .5
   epsilon_finish: .01
@@ -113,8 +113,8 @@ agent_type_1:
   # --- Logging options ---
   save_model: [True] # Save the models to disk
   save_model_interval: [200000] # Save models after this many timesteps
-  checkpoint_path: ["results/models_from_vega/population_inv__2019-11-25_18-47-58/agent_id_0/"] # Load a checkpoint from this path
-  load_step: [3600217] # Load model trained on this many timesteps (0 if choose max possible)
+  checkpoint_path: ["results/models_from_vega/population_inv__2019-11-27_18-08-43/agent_id_0/"] # Load a checkpoint from this path
+  load_step: [600097] # Load model trained on this many timesteps (0 if choose max possible)
 
 
 
