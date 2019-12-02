@@ -18,7 +18,6 @@ class MultinomialActionSelector():
     def select_action(self, agent_inputs, avail_actions, t_env, test_mode=False):
         masked_policies = agent_inputs.clone()
         masked_policies[avail_actions == 0.0] = 0.0
-        print("masked_policies", masked_policies)
         self.epsilon = self.schedule.eval(t_env)
 
         if test_mode and self.test_greedy:
@@ -53,7 +52,6 @@ class EpsilonGreedyActionSelector():
         # mask actions that are excluded from selection
         masked_q_values = agent_inputs.clone()
         masked_q_values[avail_actions == 0.0] = -float("inf")  # should never be selected!
-        print("masked_q_values", masked_q_values)
         random_numbers = th.rand_like(agent_inputs[:, :, 0])
         pick_random = (random_numbers < self.epsilon).long()
         random_actions = Categorical(avail_actions.float()).sample().long()

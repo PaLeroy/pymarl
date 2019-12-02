@@ -6,12 +6,12 @@ action_selector: "epsilon_greedy"
 epsilon_start: 0.5
 epsilon_finish: 0.05
 epsilon_anneal_time: 50000
+use_tensorboard: True
 
 runner: "episode"
 batch_size_run: 1
 
 buffer_size: 5000
-
 # update the target network every {} episodes
 target_update_interval: 200
 
