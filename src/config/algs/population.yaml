@@ -9,7 +9,7 @@ batch_size_run: 1
 name: "population_duo"
 
 
-use_cuda: False
+use_cuda: True
 
 matchmaking: "duo"
 
@@ -29,7 +29,7 @@ agent_type_1:
   action_selector: "epsilon_greedy"
   epsilon_start: 1.0
   epsilon_finish: 0.05
-  epsilon_anneal_time: 5000
+  epsilon_anneal_time: 500000
 
   gamma: 0.99
 
@@ -72,7 +72,7 @@ agent_type_2:
   action_selector: "multinomial"
   epsilon_start: .5
   epsilon_finish: .01
-  epsilon_anneal_time: 10000
+  epsilon_anneal_time: 100000
   mask_before_softmax: False
 
   gamma: 0.99
