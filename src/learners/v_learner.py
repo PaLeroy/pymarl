@@ -150,7 +150,7 @@ class VLearner:
             self.log_stats_t = t_env
 
     def _update_targets(self):
-        self.target_v_agent.load_state(self.v_agent)
+        self.target_v_agent.load_state_dict(self.v_agent.state_dict())
         self.target_v_mixer.load_state_dict(self.v_mixer.state_dict())
         self.logger.console_logger.info("Updated target network")
 
