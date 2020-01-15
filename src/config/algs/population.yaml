@@ -6,12 +6,12 @@ runner_function: "population"
 runner: "episode_runner_population"
 batch_size_run: 1
 
-name: "population_duo"
+name: "population_random"
 
 
 use_cuda: True
 
-matchmaking: "duo"
+matchmaking: "random"
 
 save_model_interval: 20000
 save_model: True # Save the models to disk
@@ -68,7 +68,7 @@ agent_type_1:
 
 agent_type_2:
   number: 1
-  mac: "do_not_mac"
+  mac: "basic_mac"
   action_selector: "multinomial"
   epsilon_start: .5
   epsilon_finish: .01

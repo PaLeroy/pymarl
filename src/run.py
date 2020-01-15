@@ -207,7 +207,6 @@ def run_population(args, logger):
             if args.evaluate or args.save_replay:
                 evaluate_sequential(args, runner)
                 return
-
     match_maker = m_REGISTRY[args.matchmaking](agent_dict)
 
     runner.setup(scheme=scheme_buffer, groups=groups, preprocess=preprocess)
@@ -226,8 +225,10 @@ def run_population(args, logger):
     while runner.t_env <= args.t_max:
         # Run for a whole episode at a time
         list_episode_matches = match_maker.list_combat(agent_dict)
+
         runner.setup_agents(list_episode_matches, agent_dict)
-        episode_batches, total_times = runner.run(test_mode=False)
+        episode_batches, total_times, win_list = runner.run(test_mode=False)
+        match_maker.update_elo(agent_dict, list_episode_matches, win_list)
 
         for idx_, match in enumerate(list_episode_matches):
             for idx2_, agent_id in enumerate(match):
@@ -274,6 +275,9 @@ def run_population(args, logger):
 
         if (runner.t_env - last_log_T) >= args.log_interval:
             logger.log_stat("episode", episode, runner.t_env)
+            for k, v in agent_dict.items():
+                logger.log_stat("agent_id_" + str(k) + "_elo",
+                                agent_dict[k]["elo"], runner.t_env)
             logger.print_recent_stats()
             last_log_T = runner.t_env
 

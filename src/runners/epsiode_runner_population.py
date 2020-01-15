@@ -72,7 +72,6 @@ class EpisodeRunnerPopulation(EpisodeRunner):
         self.mac_team2.init_hidden(batch_size=self.batch_size)
 
         while not terminated:
-
             observations = self.env.get_obs()
             obs_team_1 = observations[:self.args.n_agents]
             obs_team_2 = observations[self.args.n_agents:]
@@ -227,7 +226,9 @@ class EpisodeRunnerPopulation(EpisodeRunner):
         self.log_train_stats_t = self.t_env
 
         return [[self.batch_team_1, self.batch_team_2], ], \
-               [[self.t_total_team1, self.t_total_team2], ]
+               [[self.t_total_team1, self.t_total_team2], ], \
+               [[env_info_team1["won"],
+                 env_info_team2["won"]], ]
 
     def _log(self, returns, stats, prefix):
         self.logger.log_stat(prefix + "return_mean", np.mean(returns),
