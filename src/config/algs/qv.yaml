@@ -8,8 +8,8 @@ epsilon_finish: 0.05
 epsilon_anneal_time: 50000
 use_tensorboard: True
 
-runner: "episode"
-batch_size_run: 1
+runner: "parallel"
+batch_size_run: 8
 
 buffer_size: 5000
 # update the target network every {} episodes
@@ -22,4 +22,6 @@ double_q: False
 mixer: "vmix"
 mixing_embed_dim: 32
 
+
+use_cuda: True
 name: "vmix"
