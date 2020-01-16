@@ -12,6 +12,12 @@ class Matchmaking:
 
     def update_elo(self, agent_dict, list_episode_matches, win_list):
         for idx, match in enumerate(list_episode_matches):
+            win_1 = win_list[idx][0]
+            win_2 = win_list[idx][1]
+            if win_1 is None or win_2 is None:
+                # The match did not end
+                continue
+
             id_team_1 = match[0]
             id_team_2 = match[1]
             elo_team_1 = agent_dict[id_team_1]["elo"]
@@ -21,8 +27,6 @@ class Matchmaking:
             q_t = q_1 + q_2
             e_1 = q_1 / q_t
             e_2 = q_2 / q_t
-            win_1 = win_list[idx][0]
-            win_2 = win_list[idx][1]
             if win_1:
                 s_1 = 1
                 s_2 = 0
