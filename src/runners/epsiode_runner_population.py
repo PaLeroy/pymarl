@@ -224,11 +224,19 @@ class EpisodeRunnerPopulation(EpisodeRunner):
                     self.t_env)
 
         self.log_train_stats_t = self.t_env
-
-        return [[self.batch_team_1, self.batch_team_2], ], \
-               [[self.t_total_team1, self.t_total_team2], ], \
-               [[env_info_team1["won"],
-                 env_info_team2["won"]], ]
+        if "won" in env_info_team1 and "won" in env_info_team2:
+            return [[self.batch_team_1, self.batch_team_2], ], \
+                   [[self.t_total_team1, self.t_total_team2], ], \
+                   [[env_info_team1["won"],
+                     env_info_team2["won"]], ]
+        else:
+            # Match did not end (env restarted in the middle of the episode)
+            env_info_team1['won'] = None
+            env_info_team2['won'] = None
+            return [[self.batch_team_1, self.batch_team_2], ], \
+                   [[self.t_total_team1, self.t_total_team2], ], \
+                   [[env_info_team1["won"],
+                     env_info_team2["won"]], ]
 
     def _log(self, returns, stats, prefix):
         self.logger.log_stat(prefix + "return_mean", np.mean(returns),
