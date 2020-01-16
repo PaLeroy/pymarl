@@ -2,10 +2,12 @@ import numpy as np
 
 class Matchmaking:
     def __init__(self, agent_dict):
+        self.list_id = []
         for k, v in agent_dict.items():
+            self.list_id.append(k)
             agent_dict[k]["elo"] = 1000
 
-    def list_combat(self, agent_dict):
+    def list_combat(self, agent_dict, n_matches=1):
         return NotImplementedError
 
     def update_elo(self, agent_dict, list_episode_matches, win_list):

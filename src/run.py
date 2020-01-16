@@ -224,8 +224,8 @@ def run_population(args, logger):
 
     while runner.t_env <= args.t_max:
         # Run for a whole episode at a time
-        list_episode_matches = match_maker.list_combat(agent_dict)
-
+        list_episode_matches = match_maker.list_combat(agent_dict,
+                                                       n_matches=args.batch_size_run)
         runner.setup_agents(list_episode_matches, agent_dict)
         episode_batches, total_times, win_list = runner.run(test_mode=False)
         match_maker.update_elo(agent_dict, list_episode_matches, win_list)
