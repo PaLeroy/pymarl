@@ -223,7 +223,7 @@ class EpisodeRunnerPopulation(EpisodeRunner):
                     self.mac_team2.action_selector.epsilon,
                     self.t_env)
 
-        self.log_train_stats_t = self.t_env
+            self.log_train_stats_t = self.t_env
         if "won" in env_info_team1 and "won" in env_info_team2:
             return [[self.batch_team_1, self.batch_team_2], ], \
                    [[self.t_total_team1, self.t_total_team2], ], \
