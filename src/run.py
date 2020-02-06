@@ -453,6 +453,7 @@ def run_sequential(args, logger):
 
         if (runner.t_env - last_log_T) >= args.log_interval:
             logger.log_stat("episode", episode, runner.t_env)
+            logger.log_stat("time_elapsed", time.time()-start_time, runner.t_env)
             logger.print_recent_stats()
             last_log_T = runner.t_env
 
