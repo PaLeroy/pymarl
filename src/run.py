@@ -232,8 +232,7 @@ def run_population(args, logger):
 
         for idx_, match in enumerate(list_episode_matches):
             for idx2_, agent_id in enumerate(match):
-                agent_dict[agent_id]['t_total'] = total_times[idx_][idx2_]
-
+                agent_dict[agent_id]['t_total'] += total_times[idx_][idx2_]
         buffer.insert_episode_batch(episode_batches, agent_dict,
                                     list_episode_matches)
 
@@ -248,7 +247,6 @@ def run_population(args, logger):
 
                 if episode_sample.device != args.device:
                     episode_sample.to(args.device)
-
                 agent_dict[agent_id]['learner'].train(episode_sample,
                                                       agent_dict[agent_id][
                                                           't_total'], episode)
@@ -275,6 +273,8 @@ def run_population(args, logger):
 
         if (runner.t_env - last_log_T) >= args.log_interval:
             logger.log_stat("episode", episode, runner.t_env)
+            logger.log_stat("time_elapsed", time.time() - start_time,
+                            runner.t_env)
             for k, v in agent_dict.items():
                 logger.log_stat("agent_id_" + str(k) + "_elo",
                                 agent_dict[k]["elo"], runner.t_env)
@@ -453,6 +453,8 @@ def run_sequential(args, logger):
 
         if (runner.t_env - last_log_T) >= args.log_interval:
             logger.log_stat("episode", episode, runner.t_env)
+            logger.log_stat("time_elapsed", time.time() - start_time,
+                            runner.t_env)
             logger.print_recent_stats()
             last_log_T = runner.t_env
 

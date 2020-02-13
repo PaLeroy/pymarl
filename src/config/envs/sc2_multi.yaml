@@ -2,6 +2,7 @@ env: sc2multi
 
 
 env_args:
+  bool_side: True
   continuing_episode: False
   difficulty: "7"
   game_version: null
