@@ -275,6 +275,8 @@ def run_population(args, logger):
 
         if (runner.t_env - last_log_T) >= args.log_interval:
             logger.log_stat("episode", episode, runner.t_env)
+            logger.log_stat("time_elapsed", time.time()-start_time, runner.t_env)
+
             for k, v in agent_dict.items():
                 logger.log_stat("agent_id_" + str(k) + "_elo",
                                 agent_dict[k]["elo"], runner.t_env)
