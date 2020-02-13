@@ -166,6 +166,8 @@ def run_population_test(args, logger):
                                     preprocess=preprocess,
                                     device="cpu"
                                     if args.buffer_cpu_only else args.device)
+    match_maker = m_REGISTRY[args.matchmaking](agent_dict)
+    print("aze")
     for k, v in agent_dict.items():
         agent_dict[k]['args_sn'].n_agents = env_info["n_agents"]
         agent_dict[k]['args_sn'].n_actions = env_info["n_actions"]
@@ -200,49 +202,37 @@ def run_population_test(args, logger):
             for name in os.listdir(checkpoint_path_):
                 full_name = os.path.join(checkpoint_path_, name)
                 # Check if they are dirs the names of which are numbers
-                print(full_name)
 
                 if os.path.isdir(full_name) and name.isdigit():
                     agent_dict[k]["load_timesteps"].append(int(name))
-            print(agent_dict[k]['load_timesteps'])
-            if agent_dict[k]['args_sn'].load_step == 0:
-                # choose the max timestep
-                timestep_to_load = max(agent_dict[k]["load_timesteps"])
-            else:
-                # choose the timestep closest to load_step
-                timestep_to_load = min(agent_dict[k]["load_timesteps"],
-                                       key=lambda x: abs(x - agent_dict[k][
-                                           'args_sn'].load_step))
 
-            model_path = os.path.join(checkpoint_path_,
-                                      str(timestep_to_load))
-
-            logger.console_logger.info(
-                "Loading model from {}".format(model_path))
-            agent_dict[k]['learner'].load_models(model_path)
-            agent_dict[k]['t_total'] = timestep_to_load
-
-            if args.evaluate or args.save_replay:
-                evaluate_sequential(args, runner)
-                return
         else:
             logger.console_logger.info("Checkpoint directory doesn't exist")
             exit()
-    for k, v in agent_dict.items():
-        print(agent_dict[k]['load_timesteps'])
-    match_maker = m_REGISTRY[args.matchmaking](agent_dict)
+    agent_dict[0]["load_timesteps"]=sorted(agent_dict[0]["load_timesteps"])
+    for idx_, timestep_to_load in enumerate(agent_dict[0]["load_timesteps"]):
+        print("timestep_to_load", timestep_to_load)
+        model_path = os.path.join(agent_dict[0]['args_sn'].checkpoint_path,
+                                  str(timestep_to_load))
 
-    runner.setup(scheme=scheme_buffer, groups=groups, preprocess=preprocess)
+        logger.console_logger.info(
+            "Loading model from {}".format(model_path))
+        agent_dict[0]['learner'].load_models(model_path)
+        agent_dict[0]['t_total'] = timestep_to_load
+        if args.evaluate or args.save_replay:
+            evaluate_sequential(args, runner)
+            return
 
-    # start training
-    episode = 0
-    last_test_T = -args.test_interval - 1
-    last_log_T = 0
+        runner.setup(scheme=scheme_buffer, groups=groups,
+                     preprocess=preprocess)
 
-    start_time = time.time()
-    last_time = start_time
-
-
+        for _ in range(args.n_epsiode_per_test):
+            # Run for a whole episode at a time
+            list_episode_matches = match_maker.list_combat(agent_dict,
+                                                           n_matches=args.batch_size_run)
+            runner.setup_agents(list_episode_matches, agent_dict)
+            episode_batches, total_times, win_list = runner.run(
+                test_mode=True)
 
 
 if __name__ == '__main__':
