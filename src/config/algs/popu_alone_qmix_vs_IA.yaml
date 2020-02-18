@@ -1,0 +1,25 @@
+name: "qmix_alone_vs_IA"
+
+# use epsilon greedy action selector
+action_selector: "epsilon_greedy"
+epsilon_start: 1.0
+epsilon_finish: 0.05
+epsilon_anneal_time: 50000
+
+runner: "episode"
+batch_size_run: 1
+
+use_tensorboard: True
+
+# use the Q_Learner to train
+agent_output_type: "q"
+learner: "q_learner_exec"
+double_q: True
+mixer:
+mixing_embed_dim: 32
+
+
+
+checkpoint_path: "/Users/pascalleroy/Documents/Sc2/pymarl/src/results/qmix_alone/population_alone_qmix__2020-02-06_14-40-53/agent_id_0" # Load a checkpoint from this path
+n_epsiode_per_test: 20
+n_skip: 0 # Skip "n_skip" networks each iteration

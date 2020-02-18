@@ -147,6 +147,8 @@ def run_sequential_test(args, logger):
         groups = {
             "agents": args.n_agents
         }
+
+    print(scheme)
     preprocess = {
         "actions": ("actions_onehot", [OneHot(out_dim=args.n_actions)])
     }
@@ -184,7 +186,7 @@ def run_sequential_test(args, logger):
                 timesteps.append(int(name))
         timesteps = sorted(timesteps)
         for idx_, timestep_to_load in enumerate(timesteps):
-            if idx_ % args.n_skip != 0:
+            if args.n_skip != 0 and idx_ % args.n_skip != 0:
                 continue
             model_path = os.path.join(args.checkpoint_path,
                                       str(timestep_to_load))
