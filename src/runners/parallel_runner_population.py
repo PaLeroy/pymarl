@@ -4,7 +4,7 @@ from components.episode_buffer import EpisodeBatch
 from multiprocessing import Pipe, Process
 import numpy as np
 import torch as th
-from src.runners import ParallelRunner
+from runners import ParallelRunner
 
 
 # Based (very) heavily on SubprocVecEnv from OpenAI Baselines
@@ -272,10 +272,10 @@ class ParallelRunnerPopulation(ParallelRunner):
                      env_info_team2)})
             cur_stats[team_id1]["n_episodes"] \
                 = 1 + cur_stats[team_id1].get(
-                "ep_length", 0)
+                "n_episodes", 0)
             cur_stats[team_id2]["n_episodes"] \
                 = 1 + cur_stats[team_id2].get(
-                "ep_length", 0)
+                "n_episodes", 0)
 
             cur_stats[team_id1]["ep_length"] \
                 = episode_lengths[idx_match] + cur_stats[team_id1].get(
