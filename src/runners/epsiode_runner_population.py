@@ -72,6 +72,7 @@ class EpisodeRunnerPopulation(EpisodeRunner):
         self.mac_team2.init_hidden(batch_size=self.batch_size)
 
         while not terminated:
+            state = self.env.get_state()
             observations = self.env.get_obs()
             obs_team_1 = observations[:self.args.n_agents]
             obs_team_2 = observations[self.args.n_agents:]
@@ -80,13 +81,13 @@ class EpisodeRunnerPopulation(EpisodeRunner):
             avail_actions_team_2 = avail_actions[self.args.n_agents:]
 
             pre_transition_data_team_1 = {
-                "state": [self.env.get_state()],
+                "state": [state[0]],
                 "avail_actions": [avail_actions_team_1],
                 "obs": [obs_team_1],
             }
 
             pre_transition_data_team_2 = {
-                "state": [self.env.get_state()],
+                "state": [state[1]],
                 "avail_actions": [avail_actions_team_2],
                 "obs": [obs_team_2],
             }
@@ -132,14 +133,14 @@ class EpisodeRunnerPopulation(EpisodeRunner):
         last_avail_actions = self.env.get_avail_actions()
         avail_actions_team_1 = last_avail_actions[:self.args.n_agents]
         avail_actions_team_2 = last_avail_actions[self.args.n_agents:]
-
+        state=self.env.get_state()
         last_data_team_1 = {
-            "state": [self.env.get_state()],
+            "state": [state[0]],
             "avail_actions": [avail_actions_team_1],
             "obs": [obs_team_1],
         }
         last_data_team_2 = {
-            "state": [self.env.get_state()],
+            "state": [state[1]],
             "avail_actions": [avail_actions_team_2],
             "obs": [obs_team_2],
         }

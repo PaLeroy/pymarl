@@ -82,12 +82,12 @@ class ParallelRunnerPopulation(ParallelRunner):
             avail_actions = data["avail_actions"]
             avail_actions_team_1 = avail_actions[:self.args.n_agents]
             avail_actions_team_2 = avail_actions[self.args.n_agents:]
-            pre_transition_data_team_1 = {"state": [state],
+            pre_transition_data_team_1 = {"state": [state[0]],
                                           "avail_actions": [
                                               avail_actions_team_1],
                                           "obs": [obs_team_1]}
             pre_transition_data_1.append(pre_transition_data_team_1)
-            pre_transition_data_team_2 = {"state": [state],
+            pre_transition_data_team_2 = {"state": [state[1]],
                                           "avail_actions": [
                                               avail_actions_team_2],
                                           "obs": [obs_team_2]}
@@ -197,12 +197,12 @@ class ParallelRunnerPopulation(ParallelRunner):
                     avail_actions = data["avail_actions"]
                     avail_actions_team_1 = avail_actions[:self.args.n_agents]
                     avail_actions_team_2 = avail_actions[self.args.n_agents:]
-                    pre_transition_data_team_1 = {"state": [state],
+                    pre_transition_data_team_1 = {"state": [state[0]],
                                                   "avail_actions": [
                                                       avail_actions_team_1],
                                                   "obs": [obs_team_1]}
                     pre_transition_data_1.append(pre_transition_data_team_1)
-                    pre_transition_data_team_2 = {"state": [state],
+                    pre_transition_data_team_2 = {"state": [state[1]],
                                                   "avail_actions": [
                                                       avail_actions_team_2],
                                                   "obs": [obs_team_2]}

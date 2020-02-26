@@ -1,11 +1,10 @@
-env: sc2multi
-
+env: sc2
 
 env_args:
   continuing_episode: False
   difficulty: "7"
   game_version: null
-  map_name: "3m_multi"
+  map_name: "3m"
   move_amount: 2
   obs_all_health: True
   obs_instead_of_state: False
@@ -13,8 +12,7 @@ env_args:
   obs_own_health: True
   obs_pathing_grid: False
   obs_terrain_height: False
-  obs_bool_side: False
-  obs_own_position: True
+  obs_bool_side: True
   obs_timestep_number: False
   reward_death_value: 10
   reward_defeat: 0
@@ -35,12 +33,10 @@ env_args:
   window_size_y: 600
   debug: False
 
-
-multi: True
-learner_log_interval: 2000
-log_interval: 2000
-runner_log_interval: 2000
+learner_log_interval: 20000
+log_interval: 20000
+runner_log_interval: 20000
 t_max: 10050000
 test_interval: 20000
 test_nepisode: 24
-test_greedy: False
+test_greedy: True
