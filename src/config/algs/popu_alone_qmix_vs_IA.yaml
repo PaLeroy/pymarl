@@ -20,6 +20,6 @@ mixing_embed_dim: 32
 
 
 
-checkpoint_path: "/Users/pascalleroy/Documents/Sc2/pymarl/src/results/qmix_alone/population_alone_qmix__2020-02-06_14-40-53/agent_id_0" # Load a checkpoint from this path
-n_epsiode_per_test: 20
-n_skip: 0 # Skip "n_skip" networks each iteration
+checkpoint_path: "/Users/pascalleroy/Documents/Sc2/results/qmix_alone/models/population_alone_qmix__2020-02-26_18-21-41/agent_id_0" # Load a checkpoint from this path
+n_epsiode_per_test: 10
+n_skip: 10 # Skip "n_skip" networks each iteration
