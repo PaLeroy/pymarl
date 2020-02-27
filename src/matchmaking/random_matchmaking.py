@@ -1,4 +1,4 @@
-from src.matchmaking.matchmaking import Matchmaking
+from matchmaking.matchmaking import Matchmaking
 import numpy as np
 
 

@@ -4,7 +4,7 @@ from components.episode_buffer import EpisodeBatch
 from multiprocessing import Pipe, Process
 import numpy as np
 import torch as th
-from src.runners import ParallelRunner
+from runners import ParallelRunner
 
 
 # Based (very) heavily on SubprocVecEnv from OpenAI Baselines

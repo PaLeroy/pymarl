@@ -15,8 +15,7 @@ from matchmaking import REGISTRY as m_REGISTRY
 from controllers import REGISTRY as mac_REGISTRY
 from components.episode_buffer import ReplayBuffer
 from components.transforms import OneHot
-
-from src.components.episode_buffer import ReplayBufferPopulation
+from components.episode_buffer import ReplayBufferPopulation
 
 
 def run(_run, _config, _log):
@@ -229,7 +228,6 @@ def run_population(args, logger):
         runner.setup_agents(list_episode_matches, agent_dict)
         episode_batches, total_times, win_list = runner.run(test_mode=False)
         match_maker.update_elo(agent_dict, list_episode_matches, win_list)
-
         for idx_, match in enumerate(list_episode_matches):
             for idx2_, agent_id in enumerate(match):
                 agent_dict[agent_id]['t_total'] += total_times[idx_][idx2_]
