@@ -248,28 +248,30 @@ class ParallelRunnerPopulation(ParallelRunner):
         cur_stats = self.test_stats if test_mode else self.train_stats
         cur_returns = self.test_returns if test_mode else self.train_returns
         log_prefix = "test_" if test_mode else ""
-
         for idx_match, match in enumerate(self.list_match):
             team_id1 = match[0]
             team_id2 = match[1]
-
             env_info = final_env_infos[idx_match]
             env_info_team1 = {
-                "won": final_env_infos[idx_match]["battle_won_team_1"]}
+                "battle_won_team_1": env_info["battle_won_team_1"]}
             env_info_team2 = {
-                "won": final_env_infos[idx_match]["battle_won_team_2"]}
+                "battle_won_team_2": env_info["battle_won_team_2"]}
+            del env_info["battle_won_team_1"]
+            del env_info["battle_won_team_2"]
             cur_stats[team_id1].update(
-                {k: cur_stats[team_id1].get(k, 0) + env_info.get(k, 0) for
+                {k: cur_stats[team_id1].get(k, 0) + env_info.get(k, 0) + env_info_team1.get(k, 0) for
                  k
                  in
                  set(cur_stats[team_id1]) | set(env_info) | set(
                      env_info_team1)})
+
             cur_stats[team_id2].update(
-                {k: cur_stats[team_id2].get(k, 0) + env_info.get(k, 0) for
+                {k: cur_stats[team_id2].get(k, 0) + env_info.get(k, 0) + env_info_team2.get(k, 0) for
                  k
                  in
                  set(cur_stats[team_id2]) | set(env_info) | set(
                      env_info_team2)})
+
             cur_stats[team_id1]["n_episodes"] \
                 = 1 + cur_stats[team_id1].get(
                 "n_episodes", 0)
@@ -286,7 +288,6 @@ class ParallelRunnerPopulation(ParallelRunner):
 
             cur_returns[team_id1].extend(episode_returns[0])
             cur_returns[team_id2].extend(episode_returns[1])
-
 
         if self.t_env - self.log_train_stats_t >= self.args.runner_log_interval:
             for k, _ in self.agent_dict.items():
