@@ -49,7 +49,7 @@ class EpsilonGreedyActionSelector():
         if test_mode:
             # Greedy action selection only
             self.epsilon = 0.0
-        print("mean--", th.mean(agent_inputs), th.std(agent_inputs))
+        # print("mean--", th.mean(agent_inputs), th.std(agent_inputs))
         # mask actions that are excluded from selection
         masked_q_values = agent_inputs.clone()
         masked_q_values[avail_actions == 0.0] = -float("inf")  # should never be selected!

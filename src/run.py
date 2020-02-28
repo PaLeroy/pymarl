@@ -140,7 +140,6 @@ def run_population(args, logger):
     preprocess = {
         "actions": ("actions_onehot", [OneHot(out_dim=args.n_actions)])
     }
-    print(scheme_buffer)
     buffer = ReplayBufferPopulation(scheme_buffer,
                                     groups,
                                     args.buffer_size,
