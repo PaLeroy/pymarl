@@ -6,19 +6,19 @@ runner_function: "population"
 runner: "episode_runner_population"
 batch_size_run: 1
 
-name: "population_duo"
+name: "popu_from_save"
 
 
 use_cuda: False
 
-matchmaking: "duo"
+matchmaking: "single"
 
 save_model_interval: 20000
 save_model: True # Save the models to disk
 
 use_tensorboard: True
 
-n_agent_type: 2
+n_agent_type: 1
 
 log_interval: 20
 runner_log_interval: 20
@@ -63,59 +63,9 @@ agent_type_1:
   # --- Logging options ---
   save_model: [True] # Save the models to disk
   save_model_interval: [200000] # Save models after this many timesteps
-  checkpoint_path: ["results/models_from_vega/population_duo__2019-11-27_18-07-09/agent_id_0/"] # Load a checkpoint from this path
-  load_step: [0] # Load model trained on this many timesteps (0 if choose max possible)
-
-agent_type_2:
-  number: 1
-  mac: "do_not_mac"
-  action_selector: "multinomial"
-  epsilon_start: .5
-  epsilon_finish: .01
-  epsilon_anneal_time: 10000
-  mask_before_softmax: False
-
-  gamma: 0.99
-
-  buffer_size: 8
-
-  # update the target network every {} training steps
-  target_update_interval: 200
-
-  lr: 0.0005
-  critic_lr: 0.0005
-  td_lambda: 0.8
-
-  # use COMA
-  agent_output_type: "pi_logits"
-  learner: "coma_learner"
-  critic_q_fn: "coma"
-  critic_baseline_fn: "coma"
-  critic_train_mode: "seq"
-  critic_train_reps: 1
-  q_nstep: 0  # 0 corresponds to default Q, 1 is r + gamma*Q, etc
-
-  learner_log_interval: 2000 # Log training stats every {} timesteps
-
-
-  # --- RL hyperparameters ---
-  batch_size: 32 # Number of episodes to train on
-  optim_alpha: 0.99 # RMSProp alpha
-  optim_eps: 0.00001 # RMSProp epsilon
-  grad_norm_clip: 10 # Reduce magnitude of gradients above this L2 norm
-
-  # --- Agent parameters ---
-  agent: "rnn" # Default rnn agent
-  rnn_hidden_dim: 64 # Size of hidden state for default rnn agent
-  obs_agent_id: True # Include the agent's one_hot id in the observation
-  obs_last_action: True # Include the agent's last action (one_hot) in the observation
-
-  # --- Logging options ---
-  save_model: [True] # Save the models to disk
-  save_model_interval: [200000] # Save models after this many timesteps
-  checkpoint_path: ["results/models_from_vega/population_duo__2019-11-27_18-07-09/agent_id_1/"] # Load a checkpoint from this path
+  checkpoint_path: ["/Users/pascalleroy/Documents/Sc2/results/qmix_alone/models/population_alone_qmix__2020-02-26_18-17-40/agent_id_0"] # Load a checkpoint from this path
   load_step: [0] # Load model trained on this many timesteps (0 if choose max possible)
 
 
-
-
+n_epsiode_per_test: 3
+n_skip: 3 # Skip "n_skip" networks each iteration

@@ -5,7 +5,6 @@
 runner_function: "population"
 runner: "parallel_runner_population"
 batch_size_run: 4 # Number of env at the same time
-
 name: "population_random_para"
 
 

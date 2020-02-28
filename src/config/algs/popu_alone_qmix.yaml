@@ -4,11 +4,13 @@
 # Global parameter, indep of agent type
 runner_function: "population"
 runner: "parallel_runner_population"
+
 batch_size_run: 3 # Number of env at the same time
+
 name: "population_alone_qmix"
 
 
-use_cuda: True
+use_cuda: False
 
 matchmaking: "single"
 
@@ -28,7 +30,7 @@ agent_type_1:
   action_selector: "epsilon_greedy"
   epsilon_start: 1.0
   epsilon_finish: 0.05
-  epsilon_anneal_time: 500000
+  epsilon_anneal_time: 1000000
 
   gamma: 0.99
 
