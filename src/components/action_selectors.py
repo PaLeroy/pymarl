@@ -49,11 +49,10 @@ class EpsilonGreedyActionSelector():
         if test_mode:
             # Greedy action selection only
             self.epsilon = 0.0
-
+        # print("mean--", th.mean(agent_inputs), th.std(agent_inputs))
         # mask actions that are excluded from selection
         masked_q_values = agent_inputs.clone()
         masked_q_values[avail_actions == 0.0] = -float("inf")  # should never be selected!
-
         random_numbers = th.rand_like(agent_inputs[:, :, 0])
         pick_random = (random_numbers < self.epsilon).long()
         random_actions = Categorical(avail_actions.float()).sample().long()
