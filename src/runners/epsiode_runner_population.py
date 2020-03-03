@@ -50,8 +50,7 @@ class EpisodeRunnerPopulation(EpisodeRunner):
         self.team_id2 = list_pair[0][1]
         self.mac_team1 = agent_dict[self.team_id1]["mac"]
         self.mac_team2 = agent_dict[self.team_id2]["mac"]
-        self.t_total_team1 = 0
-        self.t_total_team2 = 0
+
 
         # TODO: for parallel execution, need to handle t_total differently
         # Reload last information (in case, not usefuel atm)
@@ -60,6 +59,8 @@ class EpisodeRunnerPopulation(EpisodeRunner):
     def reset(self):
         self.batch_team_1 = self.new_batch()
         self.batch_team_2 = self.new_batch()
+        self.t_total_team1 = 0
+        self.t_total_team2 = 0
         self.env.reset()
         self.t = 0
 
