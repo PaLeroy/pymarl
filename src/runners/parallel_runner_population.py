@@ -253,9 +253,11 @@ class ParallelRunnerPopulation(ParallelRunner):
             team_id2 = match[1]
             env_info = final_env_infos[idx_match]
             env_info_team1 = {
-                "battle_won_team_1": env_info["battle_won_team_1"]}
+                "battle_won_team_1": env_info["battle_won_team_1"],
+                "return_team_1": episode_returns[idx_match][0]}
             env_info_team2 = {
-                "battle_won_team_2": env_info["battle_won_team_2"]}
+                "battle_won_team_2": env_info["battle_won_team_2"],
+                "return_team_2": episode_returns[idx_match][1]}
             del env_info["battle_won_team_1"]
             del env_info["battle_won_team_2"]
             cur_stats[team_id1].update(
@@ -285,10 +287,8 @@ class ParallelRunnerPopulation(ParallelRunner):
             cur_stats[team_id2]["ep_length"] \
                 = episode_lengths[idx_match] + cur_stats[team_id2].get(
                 "ep_length", 0)
-
-            cur_returns[team_id1].extend(episode_returns[0])
-            cur_returns[team_id2].extend(episode_returns[1])
-
+            cur_returns[team_id1].append(episode_returns[idx_match][0])
+            cur_returns[team_id2].append(episode_returns[idx_match][1])
         if self.t_env - self.log_train_stats_t >= self.args.runner_log_interval:
             for k, _ in self.agent_dict.items():
                 id = k
