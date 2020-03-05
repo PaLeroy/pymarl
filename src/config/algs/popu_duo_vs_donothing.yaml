@@ -7,7 +7,6 @@ runner: "parallel_runner_population"
 batch_size_run: 4 # Number of env at the same time
 name: "population_duo_qmix_close_centered_vs_do_nothing"
 
-
 use_cuda: True
 
 matchmaking: "duo"
