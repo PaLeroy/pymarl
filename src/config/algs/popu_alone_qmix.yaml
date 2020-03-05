@@ -4,10 +4,9 @@
 # Global parameter, indep of agent type
 runner_function: "population"
 runner: "parallel_runner_population"
+batch_size_run: 4 # Number of env at the same time
 
-batch_size_run: 3 # Number of env at the same time
-
-name: "population_alone_qmix_close"
+name: "population_alone_qmix_close_centered"
 
 
 use_cuda: False
