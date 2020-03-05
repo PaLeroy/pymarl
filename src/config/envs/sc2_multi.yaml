@@ -9,7 +9,7 @@ env_args:
   move_amount: 2
   obs_all_health: True
   obs_instead_of_state: False
-  obs_last_action: False
+  obs_last_action: True
   obs_own_health: True
   obs_pathing_grid: False
   obs_terrain_height: False
@@ -17,9 +17,9 @@ env_args:
   obs_own_position: True
   obs_timestep_number: False
   reward_death_value: 10
-  reward_defeat: 0
+  reward_defeat: -200
   reward_negative_scale: 0.5
-  reward_only_positive: True
+  reward_only_positive: False
   reward_scale: True
   reward_scale_rate: 20
   reward_sparse: False
@@ -31,8 +31,8 @@ env_args:
   step_mul: 8
   seed: null
   heuristic_ai: False
-  window_size_x: 1024
-  window_size_y: 768
+  window_size_x: 1920
+  window_size_y: 1200
   debug: False
 
 
