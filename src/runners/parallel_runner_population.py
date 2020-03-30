@@ -289,6 +289,16 @@ class ParallelRunnerPopulation(ParallelRunner):
                 "ep_length", 0)
             cur_returns[team_id1].append(episode_returns[idx_match][0])
             cur_returns[team_id2].append(episode_returns[idx_match][1])
+        n_test_runs = max(1,
+                          self.args.test_nepisode // self.batch_size) * self.batch_size
+        n_tests_returns = 0
+        for k, v in self.test_returns.items():
+            n_tests_returns+=len(v)
+        if test_mode and (n_tests_returns == n_test_runs * 2):
+            for k, _ in self.agent_dict.items():
+                id = k
+                log_prefix_ = log_prefix + "agent_id_" + str(id) + "_"
+                self._log(cur_returns[id], cur_stats[id], log_prefix_)
         if self.t_env - self.log_train_stats_t >= self.args.runner_log_interval:
             for k, _ in self.agent_dict.items():
                 id = k

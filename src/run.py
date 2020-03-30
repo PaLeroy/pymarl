@@ -118,6 +118,7 @@ def run_population(args, logger):
                                      agent_dict=agent_dict)
 
     env_info = runner.get_env_info()
+    print(env_info)
     # Take care that env info is made for 2 teams (-> obs is a tuple)
 
     args.n_agents = env_info["n_agents"]
@@ -267,7 +268,16 @@ def run_population(args, logger):
                 agent_dict[agent_id]['learner'].save_models(save_path)
 
         episode += args.batch_size_run
-
+        n_test_runs = max(1, args.test_nepisode // runner.batch_size)
+        if (runner.t_env - last_test_T) / args.test_interval >= 1.0:
+            logger.console_logger.info(
+                "t_env: {} / {}".format(runner.t_env, args.t_max))
+            last_test_T = runner.t_env
+            for _ in range(n_test_runs):
+                list_episode_matches = match_maker.list_combat(agent_dict,
+                                                               n_matches=args.batch_size_run)
+                runner.setup_agents(list_episode_matches, agent_dict)
+                runner.run(test_mode=True)
         if (runner.t_env - last_log_T) >= args.log_interval:
             logger.log_stat("episode", episode, runner.t_env)
             logger.log_stat("time_elapsed", time.time() - start_time,
