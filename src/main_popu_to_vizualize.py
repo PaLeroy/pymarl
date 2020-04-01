@@ -135,6 +135,7 @@ def run_population_test(args, logger):
                                      agent_dict=agent_dict)
 
     env_info = runner.get_env_info()
+    print("env_info", env_info)
     # Take care that env info is made for 2 teams (-> obs is a tuple)
 
     args.n_agents = env_info["n_agents"]
@@ -167,7 +168,7 @@ def run_population_test(args, logger):
                                     device="cpu"
                                     if args.buffer_cpu_only else args.device)
     match_maker = m_REGISTRY[args.matchmaking](agent_dict)
-    print("aze")
+    print(scheme_buffer)
     for k, v in agent_dict.items():
         agent_dict[k]['args_sn'].n_agents = env_info["n_agents"]
         agent_dict[k]['args_sn'].n_actions = env_info["n_actions"]
@@ -209,33 +210,74 @@ def run_population_test(args, logger):
         else:
             logger.console_logger.info("Checkpoint directory doesn't exist")
             exit()
-    agent_dict[0]["load_timesteps"]=sorted(agent_dict[0]["load_timesteps"])
-    for idx_, timestep_to_load in enumerate(agent_dict[0]["load_timesteps"]):
-        # if timestep_to_load < 6000000:
-        #     continue
-        print("timestep_to_load", timestep_to_load)
-        model_path = os.path.join(agent_dict[0]['args_sn'].checkpoint_path,
-                                  str(timestep_to_load))
+    if args.matchmaking == "single":
+        agent_dict[0]["load_timesteps"]=sorted(agent_dict[0]["load_timesteps"])
+        for idx_, timestep_to_load in enumerate(agent_dict[0]["load_timesteps"]):
+            if timestep_to_load < 3000000:
+                continue
+            print("timestep_to_load", timestep_to_load)
+            model_path = os.path.join(agent_dict[0]['args_sn'].checkpoint_path,
+                                      str(timestep_to_load))
 
-        logger.console_logger.info(
-            "Loading model from {}".format(model_path))
-        agent_dict[0]['learner'].load_models(model_path)
-        agent_dict[0]['t_total'] = timestep_to_load
-        if args.evaluate or args.save_replay:
-            evaluate_sequential(args, runner)
-            return
+            logger.console_logger.info(
+                "Loading model from {}".format(model_path))
+            agent_dict[0]['learner'].load_models(model_path)
+            agent_dict[0]['t_total'] = timestep_to_load
+            if args.evaluate or args.save_replay:
+                evaluate_sequential(args, runner)
+                return
 
-        runner.setup(scheme=scheme_buffer, groups=groups,
-                     preprocess=preprocess)
+            runner.setup(scheme=scheme_buffer, groups=groups,
+                         preprocess=preprocess)
 
-        for _ in range(args.n_epsiode_per_test):
-            # Run for a whole episode at a time
-            list_episode_matches = match_maker.list_combat(agent_dict,
-                                                           n_matches=args.batch_size_run)
-            runner.setup_agents(list_episode_matches, agent_dict)
-            episode_batches, total_times, win_list = runner.run(
-                test_mode=True)
-            print(win_list)
+            for _ in range(args.n_epsiode_per_test):
+                # Run for a whole episode at a time
+                list_episode_matches = match_maker.list_combat(agent_dict,
+                                                               n_matches=args.batch_size_run)
+                runner.setup_agents(list_episode_matches, agent_dict)
+                episode_batches, total_times, win_list = runner.run(
+                    test_mode=True)
+                print(win_list)
+
+    if args.matchmaking == "duo":
+        agent_dict[0]["load_timesteps"] = sorted(
+            agent_dict[0]["load_timesteps"])
+        for idx_, timestep_to_load in enumerate(
+                agent_dict[0]["load_timesteps"]):
+            # if timestep_to_load < 4000000:
+            #     continue
+            print("timestep_to_load", timestep_to_load)
+            model_path1 = os.path.join(agent_dict[0]['args_sn'].checkpoint_path,
+                                      str(timestep_to_load))
+            logger.console_logger.info("Loading model from {}".format(model_path1))
+            agent_dict[0]['learner'].load_models(model_path1)
+            agent_dict[0]['t_total'] = timestep_to_load
+
+            model_path2 = os.path.join(agent_dict[1]['args_sn'].checkpoint_path,
+                str(timestep_to_load))
+            logger.console_logger.info(
+                "Loading model from {}".format(model_path2))
+            agent_dict[1]['learner'].load_models(model_path2)
+            agent_dict[1]['t_total'] = timestep_to_load
+
+            if args.evaluate or args.save_replay:
+                evaluate_sequential(args, runner)
+                return
+
+            runner.setup(scheme=scheme_buffer, groups=groups,
+                         preprocess=preprocess)
+
+            for _ in range(args.n_epsiode_per_test):
+                # Run for a whole episode at a time
+                list_episode_matches = match_maker.list_combat(agent_dict,
+                                                               n_matches=args.batch_size_run)
+                runner.setup_agents(list_episode_matches, agent_dict)
+                episode_batches, total_times, win_list = runner.run(
+                    test_mode=True)
+                print(win_list)
+    else:
+        logger.console_logger.info("Unknown matchmaking")
+        exit()
 
 if __name__ == '__main__':
     params = deepcopy(sys.argv)
