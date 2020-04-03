@@ -3,8 +3,8 @@
 
 # Global parameter, indep of agent type
 runner_function: "population"
-runner: "episode_runner_population"
-batch_size_run: 1 # Number of env at the same time
+runner: "parallel_runner_population"
+batch_size_run: 4 # Number of env at the same time
 
 name: "population_alone_coma"
 
@@ -19,9 +19,15 @@ use_tensorboard: True
 
 n_agent_type: 1
 
-log_interval: 2000
-runner_log_interval: 2000
-learner_log_interval: 2000
+log_interval: 20000
+runner_log_interval: 20000
+learner_log_interval: 20000
+
+t_max: 20050000
+test_interval: 20000
+test_nepisode: 10
+test_greedy: False
+
 agent_type_1:
     number: 1
     mac: "basic_mac"
@@ -55,7 +61,7 @@ agent_type_1:
 
 
     # --- RL hyperparameters ---
-    batch_size: 32 # Number of episodes to train on
+    batch_size: 8 # Number of episodes to train on
     optim_alpha: 0.99 # RMSProp alpha
     optim_eps: 0.00001 # RMSProp epsilon
     grad_norm_clip: 10 # Reduce magnitude of gradients above this L2 norm
