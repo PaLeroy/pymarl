@@ -13,7 +13,7 @@ env_args:
   obs_own_health: True
   obs_pathing_grid: False
   obs_terrain_height: False
-  obs_bool_side: False
+  obs_bool_team: False
   obs_own_position: True
   obs_timestep_number: False
   reward_death_value: 10
