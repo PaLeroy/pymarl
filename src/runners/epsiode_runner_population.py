@@ -51,6 +51,9 @@ class EpisodeRunnerPopulation(EpisodeRunner):
         self.mac_team1 = agent_dict[self.team_id1]["mac"]
         self.mac_team2 = agent_dict[self.team_id2]["mac"]
 
+        heuristic_t1 = type(self.mac_team1).__name__ == 'DoNothingMAC'
+        heuristic_t2 = type(self.mac_team2).__name__ == 'DoNothingMAC'
+        self.env.setup_heuristic(heuristic_t1, heuristic_t2)
 
         # TODO: for parallel execution, need to handle t_total differently
         # Reload last information (in case, not usefuel atm)
@@ -134,7 +137,7 @@ class EpisodeRunnerPopulation(EpisodeRunner):
         last_avail_actions = self.env.get_avail_actions()
         avail_actions_team_1 = last_avail_actions[:self.args.n_agents]
         avail_actions_team_2 = last_avail_actions[self.args.n_agents:]
-        state=self.env.get_state()
+        state = self.env.get_state()
         last_data_team_1 = {
             "state": [state[0]],
             "avail_actions": [avail_actions_team_1],
