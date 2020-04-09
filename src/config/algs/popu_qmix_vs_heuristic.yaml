@@ -5,7 +5,7 @@
 runner_function: "population"
 runner: "episode_runner_population"
 batch_size_run: 1 # Number of env at the same time
-name: "population_alone_qmix_500"
+name: "population_qmix_vs_heuristic"
 use_cuda: False
 
 matchmaking: "duo"
@@ -36,7 +36,7 @@ agent_type_1:
 
   gamma: 0.99
 
-  buffer_size: 500
+  buffer_size: 5000
 
   target_update_interval: 200
 
