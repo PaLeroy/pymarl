@@ -275,6 +275,9 @@ def env_worker(remote, env_fn):
             remote.send(env.get_env_info())
         elif cmd == "get_stats":
             remote.send(env.get_stats())
+        elif cmd == "setup_heuristic":
+            heuristic_list = data
+            env.setup_heuristic(heuristic_list[0], heuristic_list[1])
         else:
             raise NotImplementedError
 

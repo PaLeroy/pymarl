@@ -3,12 +3,12 @@
 
 # Global parameter, indep of agent type
 runner_function: "population"
-runner: "episode_runner_population"
-batch_size_run: 1 # Number of env at the same time
+runner: "parallel_runner_population"
+batch_size_run: 2 # Number of env at the same time
 name: "population_qmix_vs_heuristic"
 use_cuda: False
 
-matchmaking: "duo"
+matchmaking: "duo_fair"
 
 save_model_interval: 20000
 save_model: True # Save the models to disk

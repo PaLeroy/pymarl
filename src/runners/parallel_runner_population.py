@@ -50,14 +50,25 @@ class ParallelRunnerPopulation(ParallelRunner):
         self.team_id = []
         self.t_total_team = []
         self.list_match = list_match
+        heuristic_list = []
         for idx_match, match in enumerate(list_match):
             team_id1 = match[0]
             team_id2 = match[1]
             self.team_id.append([team_id1, team_id2])
             self.mac.append(
                 [agent_dict[team_id1]["mac"], agent_dict[team_id2]["mac"]])
+
+            heuristic_t1 = type(
+                agent_dict[team_id1]["mac"]).__name__ == 'DoNothingMAC'
+            heuristic_t2 = type(
+                agent_dict[team_id2]["mac"]).__name__ == 'DoNothingMAC'
+            heuristic_list.append([heuristic_t1, heuristic_t2])
             self.t_total_team.append([agent_dict[team_id1]["t_total"],
                                       agent_dict[team_id2]["t_total"]])
+
+        for idx, parent_conn in enumerate(self.parent_conns):
+            parent_conn.send(("setup_heuristic", heuristic_list[idx]))
+
         self.agent_dict = agent_dict
 
     def reset(self):
@@ -261,14 +272,18 @@ class ParallelRunnerPopulation(ParallelRunner):
             del env_info["battle_won_team_1"]
             del env_info["battle_won_team_2"]
             cur_stats[team_id1].update(
-                {k: cur_stats[team_id1].get(k, 0) + env_info.get(k, 0) + env_info_team1.get(k, 0) for
+                {k: cur_stats[team_id1].get(k, 0) + env_info.get(k,
+                                                                 0) + env_info_team1.get(
+                    k, 0) for
                  k
                  in
                  set(cur_stats[team_id1]) | set(env_info) | set(
                      env_info_team1)})
 
             cur_stats[team_id2].update(
-                {k: cur_stats[team_id2].get(k, 0) + env_info.get(k, 0) + env_info_team2.get(k, 0) for
+                {k: cur_stats[team_id2].get(k, 0) + env_info.get(k,
+                                                                 0) + env_info_team2.get(
+                    k, 0) for
                  k
                  in
                  set(cur_stats[team_id2]) | set(env_info) | set(
@@ -293,7 +308,7 @@ class ParallelRunnerPopulation(ParallelRunner):
                           self.args.test_nepisode // self.batch_size) * self.batch_size
         n_tests_returns = 0
         for k, v in self.test_returns.items():
-            n_tests_returns+=len(v)
+            n_tests_returns += len(v)
         if test_mode and (n_tests_returns == n_test_runs * 2):
             for k, _ in self.agent_dict.items():
                 id = k
@@ -305,9 +320,11 @@ class ParallelRunnerPopulation(ParallelRunner):
                 log_prefix_ = log_prefix + "agent_id_" + str(id) + "_"
                 self._log(cur_returns[id], cur_stats[id], log_prefix_)
 
-                if hasattr(self.agent_dict[k]["mac"].action_selector, "epsilon"):
+                if hasattr(self.agent_dict[k]["mac"].action_selector,
+                           "epsilon"):
                     self.logger.log_stat("agent_id_" + str(id) + "_epsilon",
-                                         self.agent_dict[k]["mac"].action_selector.epsilon,
+                                         self.agent_dict[k][
+                                             "mac"].action_selector.epsilon,
                                          self.t_env)
             self.log_train_stats_t = self.t_env
         return self.batches, list_time, list_win
@@ -316,9 +333,9 @@ class ParallelRunnerPopulation(ParallelRunner):
 
         if len(returns) > 0:
             self.logger.log_stat(prefix + "return_mean", np.mean(returns),
-                             self.t_env)
+                                 self.t_env)
             self.logger.log_stat(prefix + "return_std", np.std(returns),
-                             self.t_env)
+                                 self.t_env)
             returns.clear()
 
         for k, v in stats.items():
@@ -326,62 +343,3 @@ class ParallelRunnerPopulation(ParallelRunner):
                 self.logger.log_stat(prefix + k + "_mean",
                                      v / stats["n_episodes"], self.t_env)
         stats.clear()
-
-
-def env_worker(remote, env_fn):
-    # Make environment
-    env = env_fn.x()
-    while True:
-        cmd, data = remote.recv()
-        if cmd == "step":
-            actions = data
-            # Take a step in the environment
-            reward, terminated, env_info = env.step(actions)
-            # Return the observations, avail_actions and state to make the next action
-            state = env.get_state()
-            avail_actions = env.get_avail_actions()
-            obs = env.get_obs()
-            remote.send({
-                # Data for the next timestep needed to pick an action
-                "state": state,
-                "avail_actions": avail_actions,
-                "obs": obs,
-                # Rest of the data for the current timestep
-                "reward": reward,
-                "terminated": terminated,
-                "info": env_info
-            })
-        elif cmd == "reset":
-            env.reset()
-            remote.send({
-                "state": env.get_state(),
-                "avail_actions": env.get_avail_actions(),
-                "obs": env.get_obs()
-            })
-        elif cmd == "close":
-            env.close()
-            remote.close()
-            break
-        elif cmd == "get_env_info":
-            remote.send(env.get_env_info())
-        elif cmd == "get_stats":
-            remote.send(env.get_stats())
-        else:
-            raise NotImplementedError
-
-
-class CloudpickleWrapper():
-    """
-    Uses cloudpickle to serialize contents (otherwise multiprocessing tries to use pickle)
-    """
-
-    def __init__(self, x):
-        self.x = x
-
-    def __getstate__(self):
-        import cloudpickle
-        return cloudpickle.dumps(self.x)
-
-    def __setstate__(self, ob):
-        import pickle
-        self.x = pickle.loads(ob)
