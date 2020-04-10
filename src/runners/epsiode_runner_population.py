@@ -217,12 +217,14 @@ class EpisodeRunnerPopulation(EpisodeRunner):
                 log_prefix_ = log_prefix + "agent_id_" + str(id) + "_"
                 self._log(cur_returns[id], cur_stats[id], log_prefix_)
         if self.t_env - self.log_train_stats_t >= self.args.runner_log_interval:
-            if hasattr(self.mac_team1.action_selector, "epsilon"):
+            if hasattr(self.mac_team1, "action_selector") \
+                    and hasattr(self.mac_team1.action_selector, "epsilon"):
                 self.logger.log_stat(
                     "agent_id_" + str(self.team_id1) + "_epsilon",
                     self.mac_team1.action_selector.epsilon,
                     self.t_env)
-            if hasattr(self.mac_team2.action_selector, "epsilon"):
+            if hasattr(self.mac_team2, "action_selector") \
+                    and hasattr(self.mac_team2.action_selector, "epsilon"):
                 self.logger.log_stat(
                     "agent_id_" + str(self.team_id2) + "_epsilon",
                     self.mac_team2.action_selector.epsilon,

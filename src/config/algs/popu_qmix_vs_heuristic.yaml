@@ -73,39 +73,7 @@ agent_type_1:
 agent_type_2:
   number: 1 # number of agent of this type in the population
   mac: "do_not_mac"
-  action_selector: "epsilon_greedy"
-  epsilon_start: 1.0
-  epsilon_finish: 0.05
-  epsilon_anneal_time: 2000000
-
-  gamma: 0.99
-
-  buffer_size: 500
-
-  target_update_interval: 200
-
-  agent_output_type: "q"
-  learner: "q_learner"
-  double_q: True
-  mixer: "qmix"
-  mixing_embed_dim: 32
-
-  learner_log_interval: 2000 # Log training stats every {} timesteps
-
-
-  # --- RL hyperparameters ---
-  batch_size: 32 # Number of episodes to train on
-  lr: 0.0005 # Learning rate for agents
-  critic_lr: 0.0005 # Learning rate for critics
-  optim_alpha: 0.99 # RMSProp alpha
-  optim_eps: 0.00001 # RMSProp epsilon
-  grad_norm_clip: 10 # Reduce magnitude of gradients above this L2 norm
-
-  # --- Agent parameters ---
-  agent: "rnn" # Default rnn agent
-  rnn_hidden_dim: 64 # Size of hidden state for default rnn agent
-  obs_agent_id: True # Include the agent's one_hot id in the observation
-  obs_last_action: True # Include the agent's last action (one_hot) in the observation
+  learner: "do_not_learn"
 
   # --- Logging options ---
   save_model: [True] # Save the models to disk

@@ -320,7 +320,8 @@ class ParallelRunnerPopulation(ParallelRunner):
                 log_prefix_ = log_prefix + "agent_id_" + str(id) + "_"
                 self._log(cur_returns[id], cur_stats[id], log_prefix_)
 
-                if hasattr(self.agent_dict[k]["mac"].action_selector,
+                if hasattr(self.agent_dict[k]["mac"], "action_selector") and \
+                        hasattr(self.agent_dict[k]["mac"].action_selector,
                            "epsilon"):
                     self.logger.log_stat("agent_id_" + str(id) + "_epsilon",
                                          self.agent_dict[k][

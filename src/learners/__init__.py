@@ -1,3 +1,4 @@
+from .do_not_learn import DoNotLearn
 from .q_leaner_exec import QLearnerExec
 from .q_learner import QLearner
 from .coma_learner import COMALearner
@@ -12,3 +13,4 @@ REGISTRY["coma_learner"] = COMALearner
 REGISTRY["coma_learner_multi"] = COMALearnerMulti
 
 REGISTRY["q_learner_multi"] = QLearnerMulti
+REGISTRY["do_not_learn"] = DoNotLearn

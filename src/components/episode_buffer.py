@@ -316,6 +316,8 @@ class ReplayBufferPopulation:
         """ Returns the list of agent_id that can sample."""
         list_agent_can_cample = []
         for agent_id in self.agent_ids:
+            if agent_dict[agent_id]['args_sn'].learner == "do_not_learn":
+                continue
             if self._can_sample(agent_id,
                                 agent_dict[agent_id]['args_sn'].batch_size):
                 list_agent_can_cample.append(agent_id)
