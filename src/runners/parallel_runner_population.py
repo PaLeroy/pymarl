@@ -142,11 +142,12 @@ class ParallelRunnerPopulation(ParallelRunner):
                     [actions_match[0][0].to("cpu").numpy(),
                      actions_match[1][0].to("cpu").numpy()])
                 cpu_actions.append(cpu_action)
+            cpu_actions[-1][-1] = 0 # TODO: remove this line
             # Send actions to each env
             action_idx = 0
             for idx, parent_conn in enumerate(self.parent_conns):
-                if not terminated[
-                    idx]:  # Only send the actions to the env if it hasn't terminated
+                if not terminated[idx]:
+                    # Only send the actions to the env if it hasn't terminated
                     parent_conn.send(("step", cpu_actions[action_idx]))
                     action_idx += 1  # actions is not a list over every env
             # Update envs_not_terminated
@@ -255,6 +256,9 @@ class ParallelRunnerPopulation(ParallelRunner):
         for idx, d in enumerate(final_env_infos):
             list_win.append([d['battle_won_team_1'], d['battle_won_team_2']])
             list_time.append([episode_lengths[idx], episode_lengths[idx]])
+        print("env_stats", env_stats)
+        print("list_win", list_win)
+        print("list_time", list_time)
 
         cur_stats = self.test_stats if test_mode else self.train_stats
         cur_returns = self.test_returns if test_mode else self.train_returns

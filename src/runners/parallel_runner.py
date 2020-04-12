@@ -121,8 +121,8 @@ class ParallelRunner:
             action_idx = 0
             for idx, parent_conn in enumerate(self.parent_conns):
                 if idx in envs_not_terminated:  # We produced actions for this env
-                    if not terminated[
-                        idx]:  # Only send the actions to the env if it hasn't terminated
+                    if not terminated[idx]:
+                        # Only send the actions to the env if it hasn't terminated
                         parent_conn.send(("step", cpu_actions[action_idx]))
                     action_idx += 1  # actions is not a list over every env
 
