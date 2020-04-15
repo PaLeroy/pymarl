@@ -1,3 +1,5 @@
+from copy import deepcopy
+
 from envs import REGISTRY as env_REGISTRY
 from functools import partial
 from components.episode_buffer import EpisodeBatch
@@ -16,7 +18,7 @@ class ParallelRunnerPopulation(ParallelRunner):
         super().__init__(args, logger)
         self.agent_dict = agent_dict
         self.mac = None
-        self.t_total_team = None
+        self.agent_timer = None
         self.batches = None
         self.team_id = None
 
@@ -26,15 +28,17 @@ class ParallelRunnerPopulation(ParallelRunner):
         self.test_returns = {}
         self.train_stats = {}
         self.test_stats = {}
+        self.log_train_stats_t = {}
 
         for k, _ in agent_dict.items():
             self.train_returns[k] = []
             self.test_returns[k] = []
             self.train_stats[k] = {}
             self.test_stats[k] = {}
+            self.log_train_stats_t[k] = -1000000
 
         # Log the first run
-        self.log_train_stats_t = -1000000
+
 
     def setup(self, scheme, groups, preprocess):
         self.new_batch = partial(EpisodeBatch, scheme, groups, 1,
@@ -48,8 +52,13 @@ class ParallelRunnerPopulation(ParallelRunner):
         # This will be a list of pair of agent_id
         self.mac = []
         self.team_id = []
-        self.t_total_team = []
+        self.agent_timer = {}
+        self.agent_dict = agent_dict
         self.list_match = list_match
+
+        for k, v in agent_dict.items():
+            self.agent_timer[k] = v['t_total']
+
         heuristic_list = []
         for idx_match, match in enumerate(list_match):
             team_id1 = match[0]
@@ -63,13 +72,11 @@ class ParallelRunnerPopulation(ParallelRunner):
             heuristic_t2 = type(
                 agent_dict[team_id2]["mac"]).__name__ == 'DoNothingMAC'
             heuristic_list.append([heuristic_t1, heuristic_t2])
-            self.t_total_team.append([agent_dict[team_id1]["t_total"],
-                                      agent_dict[team_id2]["t_total"]])
 
         for idx, parent_conn in enumerate(self.parent_conns):
             parent_conn.send(("setup_heuristic", heuristic_list[idx]))
 
-        self.agent_dict = agent_dict
+
 
     def reset(self):
         self.batches = []
@@ -120,12 +127,12 @@ class ParallelRunnerPopulation(ParallelRunner):
                 self.mac[idx_match][idx_team].init_hidden(batch_size=1)
 
         terminated = [False for _ in range(self.batch_size)]
-        final_env_infos = []  # may store extra stats like battle won. this is filled in ORDER OF TERMINATION
+        final_env_infos = [{} for _ in range(self.batch_size)]  # may store extra stats like battle won. this is filled in ORDER OF TERMINATION
 
         while True:
             actions = []
             cpu_actions = []
-            for idx_match, _ in enumerate(self.list_match):
+            for idx_match, match in enumerate(self.list_match):
                 if terminated[idx_match]:
                     continue
                 actions_match = []
@@ -133,7 +140,7 @@ class ParallelRunnerPopulation(ParallelRunner):
                     action = self.mac[idx_match][idx_team].select_actions(
                         self.batches[idx_match][idx_team],
                         t_ep=self.t,
-                        t_env=self.t_total_team[idx_match][idx_team],
+                        t_env=self.agent_timer[match[idx_team]],
                         test_mode=test_mode)
                     actions_match.append(action)
 
@@ -142,14 +149,17 @@ class ParallelRunnerPopulation(ParallelRunner):
                     [actions_match[0][0].to("cpu").numpy(),
                      actions_match[1][0].to("cpu").numpy()])
                 cpu_actions.append(cpu_action)
-            cpu_actions[-1][-1] = 0 # TODO: remove this line
             # Send actions to each env
+            import random
+            if random.random() < 0.1 and len(cpu_actions)==self.batch_size:
+                cpu_actions[-1][-1] = 0
             action_idx = 0
             for idx, parent_conn in enumerate(self.parent_conns):
                 if not terminated[idx]:
                     # Only send the actions to the env if it hasn't terminated
                     parent_conn.send(("step", cpu_actions[action_idx]))
                     action_idx += 1  # actions is not a list over every env
+
             # Update envs_not_terminated
             all_terminated = all(terminated)
             if all_terminated:
@@ -179,7 +189,7 @@ class ParallelRunnerPopulation(ParallelRunner):
 
                     env_terminated = False
                     if data["terminated"]:
-                        final_env_infos.append(data["info"])
+                        final_env_infos[idx] = data["info"]
                         if not data["info"].get("episode_limit", False):
                             env_terminated = True
                     terminated[idx] = data["terminated"]
@@ -199,7 +209,8 @@ class ParallelRunnerPopulation(ParallelRunner):
                     episode_lengths[idx] += 1
 
                     if not test_mode:
-                        self.env_steps_this_run += 1
+                        self.agent_timer[self.team_id[idx][0]] += 1
+                        self.agent_timer[self.team_id[idx][1]] += 1
 
                     # Data for the next timestep needed to select an action
                     state = data["state"]
@@ -239,9 +250,6 @@ class ParallelRunnerPopulation(ParallelRunner):
                     self.batches[idx][1].update(pre_transition_data_2[idx],
                                                 ts=self.t)
 
-        if not test_mode:
-            self.t_env += self.env_steps_this_run
-
         # Get stats back for each env
         for parent_conn in self.parent_conns:
             parent_conn.send(("get_stats", None))
@@ -251,19 +259,34 @@ class ParallelRunnerPopulation(ParallelRunner):
             env_stat = parent_conn.recv()
             env_stats.append(env_stat)
 
+        # Pre analyze. Exclude information from bugged environments: env that
         list_win = []
         list_time = []
+        list_canceled_match = []
         for idx, d in enumerate(final_env_infos):
-            list_win.append([d['battle_won_team_1'], d['battle_won_team_2']])
-            list_time.append([episode_lengths[idx], episode_lengths[idx]])
-        print("env_stats", env_stats)
-        print("list_win", list_win)
-        print("list_time", list_time)
+            won_team_1 = d['battle_won_team_1']
+            won_team_2 = d['battle_won_team_2']
+            episode_length = episode_lengths[idx]
+            if not won_team_1 and not won_team_2 and episode_length < self.episode_limit:
+                self.agent_timer[self.list_match[idx][0]] -= episode_length
+                self.agent_timer[self.list_match[idx][1]] -= episode_length
+                list_win.append(None)
+                list_time.append(None)
+                self.batches[idx] = None
+                list_canceled_match.append(True)
+            else:
+                list_win.append([won_team_1, won_team_2])
+                list_time.append([episode_length, episode_length])
+                list_canceled_match.append(False)
+
 
         cur_stats = self.test_stats if test_mode else self.train_stats
         cur_returns = self.test_returns if test_mode else self.train_returns
+
         log_prefix = "test_" if test_mode else ""
         for idx_match, match in enumerate(self.list_match):
+            if list_canceled_match[idx_match]:
+                continue
             team_id1 = match[0]
             team_id2 = match[1]
             env_info = final_env_infos[idx_match]
@@ -292,6 +315,28 @@ class ParallelRunnerPopulation(ParallelRunner):
                  in
                  set(cur_stats[team_id2]) | set(env_info) | set(
                      env_info_team2)})
+            if env_info_team1["battle_won_team_1"]:
+                cur_stats[team_id1]["won"] \
+                    = 1 + cur_stats[team_id1].get(
+                    "won", 0)
+                cur_stats[team_id2]["defeat"] \
+                    = 1 + cur_stats[team_id2].get(
+                    "defeat", 0)
+
+            elif env_info_team2["battle_won_team_2"]:
+                cur_stats[team_id2]["won"] \
+                    = 1 + cur_stats[team_id2].get(
+                    "won", 0)
+                cur_stats[team_id1]["defeat"] \
+                    = 1 + cur_stats[team_id1].get(
+                    "defeat", 0)
+            else:
+                cur_stats[team_id1]["draw"] \
+                    = 1 + cur_stats[team_id1].get(
+                    "draw", 0)
+                cur_stats[team_id2]["draw"] \
+                    = 1 + cur_stats[team_id2].get(
+                    "draw", 0)
 
             cur_stats[team_id1]["n_episodes"] \
                 = 1 + cur_stats[team_id1].get(
@@ -308,43 +353,48 @@ class ParallelRunnerPopulation(ParallelRunner):
                 "ep_length", 0)
             cur_returns[team_id1].append(episode_returns[idx_match][0])
             cur_returns[team_id2].append(episode_returns[idx_match][1])
-        n_test_runs = max(1,
-                          self.args.test_nepisode // self.batch_size) * self.batch_size
-        n_tests_returns = 0
-        for k, v in self.test_returns.items():
-            n_tests_returns += len(v)
-        if test_mode and (n_tests_returns == n_test_runs * 2):
-            for k, _ in self.agent_dict.items():
-                id = k
-                log_prefix_ = log_prefix + "agent_id_" + str(id) + "_"
-                self._log(cur_returns[id], cur_stats[id], log_prefix_)
-        if self.t_env - self.log_train_stats_t >= self.args.runner_log_interval:
-            for k, _ in self.agent_dict.items():
-                id = k
-                log_prefix_ = log_prefix + "agent_id_" + str(id) + "_"
-                self._log(cur_returns[id], cur_stats[id], log_prefix_)
 
-                if hasattr(self.agent_dict[k]["mac"], "action_selector") and \
-                        hasattr(self.agent_dict[k]["mac"].action_selector,
+        if test_mode:
+            n_test_runs = max(1,
+                              self.args.test_nepisode // self.batch_size) * self.batch_size
+            n_tests_returns = 0
+            for k, v in self.test_returns.items():
+                n_tests_returns += len(v)
+            if (n_tests_returns >= n_test_runs * 2):
+                for k, _ in self.agent_dict.items():
+                    id = k
+                    time = self.agent_timer[id]
+                    log_prefix_ = log_prefix + "agent_id_" + str(id) + "_"
+                    self._log(cur_returns[id], cur_stats[id], log_prefix_, time)
+
+        for id, _ in self.agent_dict.items():
+            time = self.agent_timer[id]
+            if time - self.log_train_stats_t[id] >= self.args.runner_log_interval:
+                log_prefix_ = log_prefix + "agent_id_" + str(id) + "_"
+                self._log(cur_returns[id], cur_stats[id], log_prefix_, time)
+
+                if hasattr(self.agent_dict[id]["mac"], "action_selector") and \
+                        hasattr(self.agent_dict[id]["mac"].action_selector,
                            "epsilon"):
                     self.logger.log_stat("agent_id_" + str(id) + "_epsilon",
-                                         self.agent_dict[k][
+                                         self.agent_dict[id][
                                              "mac"].action_selector.epsilon,
-                                         self.t_env)
-            self.log_train_stats_t = self.t_env
+                                         time)
+                self.log_train_stats_t[id] = time
+
         return self.batches, list_time, list_win
 
-    def _log(self, returns, stats, prefix):
+    def _log(self, returns, stats, prefix, time):
 
         if len(returns) > 0:
             self.logger.log_stat(prefix + "return_mean", np.mean(returns),
-                                 self.t_env)
+                                 time)
             self.logger.log_stat(prefix + "return_std", np.std(returns),
-                                 self.t_env)
+                                 time)
             returns.clear()
 
         for k, v in stats.items():
             if k != "n_episodes":
                 self.logger.log_stat(prefix + k + "_mean",
-                                     v / stats["n_episodes"], self.t_env)
+                                     v / stats["n_episodes"], time)
         stats.clear()

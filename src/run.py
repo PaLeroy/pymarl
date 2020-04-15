@@ -118,7 +118,6 @@ def run_population(args, logger):
                                      agent_dict=agent_dict)
 
     env_info = runner.get_env_info()
-    print(env_info)
     # Take care that env info is made for 2 teams (-> obs is a tuple)
 
     args.n_agents = env_info["n_agents"]
@@ -164,6 +163,7 @@ def run_population(args, logger):
             buffer.scheme,
             logger, agent_dict[k]['args_sn'], id_agent=str(k))
         agent_dict[k]['t_total'] = 0
+        agent_dict[k]['episode'] = 0
         agent_dict[k]['model_save_time'] = 0
 
         if args.use_cuda:
@@ -211,7 +211,6 @@ def run_population(args, logger):
     runner.setup(scheme=scheme_buffer, groups=groups, preprocess=preprocess)
 
     # start training
-    episode = 0
     last_test_T = -args.test_interval - 1
     last_log_T = 0
 
@@ -221,7 +220,8 @@ def run_population(args, logger):
     logger.console_logger.info(
         "Beginning training for {} timesteps".format(args.t_max))
 
-    while runner.t_env <= args.t_max:
+    min_played_times=0
+    while min_played_times <= args.t_max:
         # Run for a whole episode at a time
         list_episode_matches = match_maker.list_combat(agent_dict,
                                                        n_matches=args.batch_size_run)
@@ -229,11 +229,16 @@ def run_population(args, logger):
         episode_batches, total_times, win_list = runner.run(test_mode=False)
         match_maker.update_elo(agent_dict, list_episode_matches, win_list)
         for idx_, match in enumerate(list_episode_matches):
+            if total_times[idx_] is None:
+                continue
             for idx2_, agent_id in enumerate(match):
                 agent_dict[agent_id]['t_total'] += total_times[idx_][idx2_]
+                agent_dict[agent_id]['episode'] += 1
         buffer.insert_episode_batch(episode_batches, agent_dict,
                                     list_episode_matches)
 
+        played_times = [v['t_total'] for _, v in agent_dict.items()]
+        min_played_times = min(played_times)
         list_agent_can_sample = buffer.can_sample(agent_dict)
         if list_agent_can_sample:
             for agent_id in list_agent_can_sample:
@@ -246,8 +251,8 @@ def run_population(args, logger):
                 if episode_sample.device != args.device:
                     episode_sample.to(args.device)
                 agent_dict[agent_id]['learner'].train(episode_sample,
-                                                      agent_dict[agent_id][
-                                                          't_total'], episode)
+                                                      agent_dict[agent_id]['t_total'],
+                                                      agent_dict[agent_id]['episode'])
         for agent_id, dict___ in agent_dict.items():
             if dict___['args_sn'].save_model \
                     and (dict___['t_total'] - dict___['model_save_time']
@@ -267,26 +272,29 @@ def run_population(args, logger):
 
                 agent_dict[agent_id]['learner'].save_models(save_path)
 
-        episode += args.batch_size_run
-        n_test_runs = max(1, args.test_nepisode // runner.batch_size)
-        if (runner.t_env - last_test_T) / args.test_interval >= 1.0:
+        if (min_played_times - last_test_T) / args.test_interval >= 1.0:
             logger.console_logger.info(
-                "t_env: {} / {}".format(runner.t_env, args.t_max))
-            last_test_T = runner.t_env
-            for _ in range(n_test_runs):
+                "t_env: {} / {}".format(min_played_times, args.t_max))
+            last_test_T = min_played_times
+            cpt = 0
+            while cpt < args.test_nepisode:
+
                 list_episode_matches = match_maker.list_combat(agent_dict,
                                                                n_matches=args.batch_size_run)
                 runner.setup_agents(list_episode_matches, agent_dict)
-                runner.run(test_mode=True)
-        if (runner.t_env - last_log_T) >= args.log_interval:
-            logger.log_stat("episode", episode, runner.t_env)
+                episode_batches, total_times, win_list = runner.run(test_mode=True)
+                cpt += sum([tmp is not None for tmp in total_times])
+
+
+        if (min_played_times - last_log_T) >= args.log_interval:
+            # logger.log_stat("episode", episode, runner.t_env)
             logger.log_stat("time_elapsed", time.time() - start_time,
-                            runner.t_env)
+                            min_played_times)
             for k, v in agent_dict.items():
                 logger.log_stat("agent_id_" + str(k) + "_elo",
-                                agent_dict[k]["elo"], runner.t_env)
-            logger.print_recent_stats()
-            last_log_T = runner.t_env
+                                agent_dict[k]["elo"], agent_dict[k]["t_total"])
+            # logger.print_recent_stats()
+            last_log_T = min_played_times
 
 
 def run_sequential(args, logger):

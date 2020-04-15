@@ -12,6 +12,8 @@ class Matchmaking:
 
     def update_elo(self, agent_dict, list_episode_matches, win_list):
         for idx, match in enumerate(list_episode_matches):
+            if win_list[idx] is None:
+                continue
             win_1 = win_list[idx][0]
             win_2 = win_list[idx][1]
             if win_1 is None or win_2 is None:

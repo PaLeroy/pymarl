@@ -308,6 +308,8 @@ class ReplayBufferPopulation:
         # Refactor the episode batch (with a 2 player scheme)
         # into two episode batch with a 1 player scheme
         for idx_, match in enumerate(list_matches):
+            if episode_batches[idx_] is None:
+                continue
             for idx2_, agent_id in enumerate(match):
                 self.buffers[agent_id].insert_episode_batch(
                     episode_batches[idx_][idx2_])
