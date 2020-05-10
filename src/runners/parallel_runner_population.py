@@ -52,7 +52,9 @@ class ParallelRunnerPopulation(ParallelRunner):
             self.noise_train_won[k] = {}
 
     def cuda(self):
-        exit()
+        for k, v in self.agent_dict.items():
+            if v['args_sn'].mac == "maven_mac":
+                self.noise_distrib[k].cuda()
 
     def setup(self, agent_dict, groups, preprocess):
         for k, v in agent_dict.items():
