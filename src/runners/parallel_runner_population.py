@@ -150,9 +150,6 @@ class ParallelRunnerPopulation(ParallelRunner):
                      actions_match[1][0].to("cpu").numpy()])
                 cpu_actions.append(cpu_action)
             # Send actions to each env
-            import random
-            if random.random() < 0.1 and len(cpu_actions)==self.batch_size:
-                cpu_actions[-1][-1] = 0
             action_idx = 0
             for idx, parent_conn in enumerate(self.parent_conns):
                 if not terminated[idx]:
