@@ -107,6 +107,7 @@ def run_population(args, logger):
                 save_model_interval[j]
             args_this_agent_modified["checkpoint_path"] = checkpoint_path[j]
             args_this_agent_modified["load_step"] = load_step[j]
+            args_this_agent_modified["batch_size_run"] = args.batch_size_run
             new_agent = {
                 'id': agent_id,
                 'args_sn': SN(**args_this_agent_modified)
@@ -123,16 +124,22 @@ def run_population(args, logger):
     args.n_agents = env_info["n_agents"]
     args.n_actions = env_info["n_actions"]
     args.state_shape = env_info["state_shape"]
+    for k, v in agent_dict.items():
+        # noinspection DuplicatedCode
+        scheme = {"state": {"vshape": env_info["state_shape"]},
+                  "obs": {"vshape": env_info["obs_shape"][0],
+                          "group": "agents"},
+                  "actions": {"vshape": (1,), "group": "agents",
+                              "dtype": th.long},
+                  "avail_actions": {"vshape": (env_info["n_actions"],),
+                                    "group": "agents", "dtype": th.int},
+                  "reward": {"vshape": (1,)},
+                  "terminated": {"vshape": (1,), "dtype": th.uint8},
+                  }
+        if agent_dict[k]['args_sn'].mac == "maven_mac":
+            scheme["noise"] = {"vshape": (agent_dict[k]['args_sn'].noise_dim,)}
 
-    scheme_buffer = {
-        "state": {"vshape": env_info["state_shape"]},
-        "obs": {"vshape": env_info["obs_shape"][0], "group": "agents"},
-        "actions": {"vshape": (1,), "group": "agents", "dtype": th.long},
-        "avail_actions": {"vshape": (env_info["n_actions"],),
-                          "group": "agents", "dtype": th.int},
-        "reward": {"vshape": (1,)},
-        "terminated": {"vshape": (1,), "dtype": th.uint8},
-    }
+        agent_dict[k]['scheme_buffer'] = scheme
 
     groups = {
         "agents": args.n_agents,
@@ -140,8 +147,7 @@ def run_population(args, logger):
     preprocess = {
         "actions": ("actions_onehot", [OneHot(out_dim=args.n_actions)])
     }
-    buffer = ReplayBufferPopulation(scheme_buffer,
-                                    groups,
+    buffer = ReplayBufferPopulation(groups,
                                     args.buffer_size,
                                     env_info["episode_limit"] + 1,
                                     agent_dict,
@@ -208,7 +214,7 @@ def run_population(args, logger):
                 return
     match_maker = m_REGISTRY[args.matchmaking](agent_dict)
 
-    runner.setup(scheme=scheme_buffer, groups=groups, preprocess=preprocess)
+    runner.setup(agent_dict=agent_dict, groups=groups, preprocess=preprocess)
 
     # start training
     last_test_T = -args.test_interval - 1
@@ -220,7 +226,7 @@ def run_population(args, logger):
     logger.console_logger.info(
         "Beginning training for {} timesteps".format(args.t_max))
 
-    min_played_times=0
+    min_played_times = 0
     while min_played_times <= args.t_max:
         # Run for a whole episode at a time
         list_episode_matches = match_maker.list_combat(agent_dict,
@@ -251,8 +257,10 @@ def run_population(args, logger):
                 if episode_sample.device != args.device:
                     episode_sample.to(args.device)
                 agent_dict[agent_id]['learner'].train(episode_sample,
-                                                      agent_dict[agent_id]['t_total'],
-                                                      agent_dict[agent_id]['episode'])
+                                                      agent_dict[agent_id][
+                                                          't_total'],
+                                                      agent_dict[agent_id][
+                                                          'episode'])
         for agent_id, dict___ in agent_dict.items():
             if dict___['args_sn'].save_model \
                     and (dict___['t_total'] - dict___['model_save_time']
@@ -278,13 +286,12 @@ def run_population(args, logger):
             last_test_T = min_played_times
             cpt = 0
             while cpt < args.test_nepisode:
-
                 list_episode_matches = match_maker.list_combat(agent_dict,
                                                                n_matches=args.batch_size_run)
                 runner.setup_agents(list_episode_matches, agent_dict)
-                episode_batches, total_times, win_list = runner.run(test_mode=True)
+                episode_batches, total_times, win_list = runner.run(
+                    test_mode=True)
                 cpt += sum([tmp is not None for tmp in total_times])
-
 
         if (min_played_times - last_log_T) >= args.log_interval:
             # logger.log_stat("episode", episode, runner.t_env)
@@ -351,6 +358,8 @@ def run_sequential(args, logger):
     preprocess = {
         "actions": ("actions_onehot", [OneHot(out_dim=args.n_actions)])
     }
+    if args.mac == "maven_mac":
+        scheme["noise"] = {"vshape": (args.noise_dim,)}
 
     buffer = ReplayBuffer(scheme, groups, args.buffer_size,
                           env_info["episode_limit"] + 1,

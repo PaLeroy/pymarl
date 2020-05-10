@@ -285,7 +285,6 @@ class ReplayBufferPopulation:
     """
 
     def __init__(self,
-                 scheme,
                  groups,
                  batch_size,
                  max_seq_length,
@@ -297,7 +296,7 @@ class ReplayBufferPopulation:
         self.agent_ids = []
         for k, v in agent_dict.items():
             self.agent_ids.append(k)
-            self.buffers[k] = ReplayBuffer(scheme, groups, batch_size,
+            self.buffers[k] = ReplayBuffer(v['scheme_buffer'], groups, batch_size,
                                            max_seq_length,
                                            preprocess=preprocess,
                                            device=device)

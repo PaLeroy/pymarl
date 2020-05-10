@@ -28,14 +28,19 @@ class IACCritic(nn.Module):
     def _build_inputs(self, batch, t=None):
         bs = batch.batch_size
         max_t = batch.max_seq_length if t is None else 1
-        ts = slice(None) if t is None else slice(t, t+1)
+        ts = slice(None) if t is None else slice(t, t + 1)
         inputs = []
         # observation
         inputs.append(batch["obs"][:, ts])
         # actions
         actions = batch["actions_onehot"][:, ts]
         inputs.append(actions)
-        inputs = th.cat([x.reshape(bs, max_t, self.n_agents, -1) for x in inputs], dim=-1)
+        # agent id
+        inputs.append(
+            th.eye(self.n_agents, device=batch.device).unsqueeze(0).unsqueeze(
+                0).expand(bs, max_t, -1, -1))
+        inputs = th.cat(
+            [x.reshape(bs, max_t, self.n_agents, -1) for x in inputs], dim=-1)
         return inputs
 
     def _get_input_shape(self, scheme):
@@ -43,4 +48,6 @@ class IACCritic(nn.Module):
         input_shape = scheme["obs"]["vshape"]
         # actions
         input_shape += scheme["actions_onehot"]["vshape"][0]
+        # agent id
+        input_shape += self.n_agents
         return input_shape

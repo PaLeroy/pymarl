@@ -7,6 +7,9 @@ from multiprocessing import Pipe, Process
 import numpy as np
 import torch as th
 from runners import ParallelRunner
+from modules.bandits.uniform import Uniform
+from modules.bandits.reinforce_hierarchial import EZ_agent as enza
+from modules.bandits.returns_bandit import ReturnsBandit as RBandit
 
 
 # Based (very) heavily on SubprocVecEnv from OpenAI Baselines
@@ -21,7 +24,8 @@ class ParallelRunnerPopulation(ParallelRunner):
         self.agent_timer = None
         self.batches = None
         self.team_id = None
-
+        self.list_match = None
+        self.noise = None
         self.t = None
 
         self.train_returns = {}
@@ -29,6 +33,13 @@ class ParallelRunnerPopulation(ParallelRunner):
         self.train_stats = {}
         self.test_stats = {}
         self.log_train_stats_t = {}
+        self.noise_returns = {}
+        self.noise_test_won = {}
+        self.noise_train_won = {}
+
+        self.new_batch = {}
+
+        self.noise_distrib = {}
 
         for k, _ in agent_dict.items():
             self.train_returns[k] = []
@@ -36,15 +47,36 @@ class ParallelRunnerPopulation(ParallelRunner):
             self.train_stats[k] = {}
             self.test_stats[k] = {}
             self.log_train_stats_t[k] = -1000000
+            self.noise_returns[k] = {}
+            self.noise_test_won[k] = {}
+            self.noise_train_won[k] = {}
 
-        # Log the first run
+    def cuda(self):
+        exit()
 
-
-    def setup(self, scheme, groups, preprocess):
-        self.new_batch = partial(EpisodeBatch, scheme, groups, 1,
-                                 self.episode_limit + 1,
-                                 preprocess=preprocess,
-                                 device=self.args.device)
+    def setup(self, agent_dict, groups, preprocess):
+        for k, v in agent_dict.items():
+            self.new_batch[k] = partial(EpisodeBatch, v['scheme_buffer'],
+                                        groups, 1,
+                                        self.episode_limit + 1,
+                                        preprocess=preprocess,
+                                        device=self.args.device)
+            # set up noise distrib
+            if v['args_sn'].mac == "maven_mac":
+                dict_args = deepcopy(agent_dict[k]['args_sn'])
+                dict_args.batch_size_run = 1
+                if v['args_sn'].noise_bandit:
+                    if v['args_sn'].bandit_policy:
+                        self.noise_distrib[k] = enza(dict_args,
+                                                     logger=self.logger)
+                    else:
+                        self.noise_distrib[k] = RBandit(
+                            dict_args,
+                            logger=self.logger)
+                else:
+                    self.noise_distrib[k] = Uniform(dict_args)
+            else:
+                self.noise_distrib[k] = None
 
     def setup_agents(self, list_match, agent_dict):
         # To be called between each episode
@@ -55,6 +87,7 @@ class ParallelRunnerPopulation(ParallelRunner):
         self.agent_timer = {}
         self.agent_dict = agent_dict
         self.list_match = list_match
+        self.noise = []
 
         for k, v in agent_dict.items():
             self.agent_timer[k] = v['t_total']
@@ -64,9 +97,12 @@ class ParallelRunnerPopulation(ParallelRunner):
             team_id1 = match[0]
             team_id2 = match[1]
             self.team_id.append([team_id1, team_id2])
+            # Controller
             self.mac.append(
                 [agent_dict[team_id1]["mac"], agent_dict[team_id2]["mac"]])
-
+            # New noises
+            self.noise.append([None, None])
+            # Check if env uses heuristic.
             heuristic_t1 = type(
                 agent_dict[team_id1]["mac"]).__name__ == 'DoNothingMAC'
             heuristic_t2 = type(
@@ -76,13 +112,11 @@ class ParallelRunnerPopulation(ParallelRunner):
         for idx, parent_conn in enumerate(self.parent_conns):
             parent_conn.send(("setup_heuristic", heuristic_list[idx]))
 
-
-
-    def reset(self):
+    def reset(self, test_mode=False):
         self.batches = []
-        for _ in self.list_match:
-            self.batches.append([self.new_batch(), self.new_batch()])
-
+        for match in self.list_match:
+            self.batches.append(
+                [self.new_batch[match[0]](), self.new_batch[match[1]]()])
         # Reset the envs
         for parent_conn in self.parent_conns:
             parent_conn.send(("reset", None))
@@ -110,15 +144,31 @@ class ParallelRunnerPopulation(ParallelRunner):
                                               avail_actions_team_2],
                                           "obs": [obs_team_2]}
             pre_transition_data_2.append(pre_transition_data_team_2)
+
         self.t = 0
+        self.env_steps_this_run = 0
+
         for idx, _ in enumerate(self.batches):
             self.batches[idx][0].update(pre_transition_data_1[idx], ts=self.t)
             self.batches[idx][1].update(pre_transition_data_2[idx], ts=self.t)
 
-        self.env_steps_this_run = 0
+        for idx, match in enumerate(self.list_match):
+            id_team_1 = match[0]
+            if self.agent_dict[id_team_1]['args_sn'].mac == "maven_mac":
+                state = self.batches[idx][0]['state']
+                noise = self.noise_distrib[id_team_1].sample(state[:, 0],
+                                                             test_mode)
+                self.batches[idx][0].update({"noise": noise}, ts=0)
 
-    def run(self, test_mode=False):
-        self.reset()
+            id_team_2 = match[1]
+            if self.agent_dict[id_team_2]['args_sn'].mac == "maven_mac":
+                state = self.batches[idx][1]["state"]
+                noise = self.noise_distrib[id_team_2].sample(state[:, 0],
+                                                             test_mode)
+                self.batches[idx][1].update({"noise": noise}, ts=0)
+
+    def run(self, test_mode=False, test_uniform=False):
+        self.reset(test_uniform)
         all_terminated = False
         episode_returns = [np.zeros(2) for _ in range(self.batch_size)]
         episode_lengths = [0 for _ in range(self.batch_size)]
@@ -127,7 +177,8 @@ class ParallelRunnerPopulation(ParallelRunner):
                 self.mac[idx_match][idx_team].init_hidden(batch_size=1)
 
         terminated = [False for _ in range(self.batch_size)]
-        final_env_infos = [{} for _ in range(self.batch_size)]  # may store extra stats like battle won. this is filled in ORDER OF TERMINATION
+        final_env_infos = [{} for _ in range(
+            self.batch_size)]  # may store extra stats like battle won. this is filled in ORDER OF TERMINATION
 
         while True:
             actions = []
@@ -150,9 +201,7 @@ class ParallelRunnerPopulation(ParallelRunner):
                      actions_match[1][0].to("cpu").numpy()])
                 cpu_actions.append(cpu_action)
             # Send actions to each env
-            import random
-            if random.random() < 0.1 and len(cpu_actions)==self.batch_size:
-                cpu_actions[-1][-1] = 0
+
             action_idx = 0
             for idx, parent_conn in enumerate(self.parent_conns):
                 if not terminated[idx]:
@@ -279,7 +328,6 @@ class ParallelRunnerPopulation(ParallelRunner):
                 list_time.append([episode_length, episode_length])
                 list_canceled_match.append(False)
 
-
         cur_stats = self.test_stats if test_mode else self.train_stats
         cur_returns = self.test_returns if test_mode else self.train_returns
 
@@ -354,6 +402,35 @@ class ParallelRunnerPopulation(ParallelRunner):
             cur_returns[team_id1].append(episode_returns[idx_match][0])
             cur_returns[team_id2].append(episode_returns[idx_match][1])
 
+        # update noise network for each agent
+        for team_id, v in self.agent_dict.items():
+            if v['args_sn'].mac == "maven_mac":
+                returns_for_this_agent = []
+                init_states_for_this_agent = []
+                noise_for_this_agent= []
+
+                for id_match, match in enumerate(self.list_match):
+                    if match[0] == team_id:
+                        returns_for_this_agent. \
+                            append(episode_returns[id_match][0])
+                        init_states_for_this_agent.\
+                            append(self.batches[id_match][0]["state"][:, 0])
+                        noise_for_this_agent.append(self.batches[id_match][0]['noise'][:])
+                    if match[1] == team_id:
+                        returns_for_this_agent. \
+                            append(episode_returns[id_match][1])
+                        init_states_for_this_agent. \
+                            append(self.batches[id_match][1]["state"][:, 0])
+                        noise_for_this_agent.append(self.batches[id_match][1]['noise'][:])
+                init_states_for_this_agent = th.stack(init_states_for_this_agent, dim=1)[0]
+                noise_for_this_agent = th.stack(noise_for_this_agent, dim=1)[0,0]
+                time = self.agent_timer[team_id]
+                self.noise_distrib[team_id].update_returns(init_states_for_this_agent,
+                                                           noise_for_this_agent,
+                                                           returns_for_this_agent,
+                                                           test_mode,
+                                                           time)
+
         if test_mode:
             n_test_runs = max(1,
                               self.args.test_nepisode // self.batch_size) * self.batch_size
@@ -365,17 +442,19 @@ class ParallelRunnerPopulation(ParallelRunner):
                     id = k
                     time = self.agent_timer[id]
                     log_prefix_ = log_prefix + "agent_id_" + str(id) + "_"
-                    self._log(cur_returns[id], cur_stats[id], log_prefix_, time)
+                    self._log(cur_returns[id], cur_stats[id], log_prefix_,
+                              time)
 
         for id, _ in self.agent_dict.items():
             time = self.agent_timer[id]
-            if time - self.log_train_stats_t[id] >= self.args.runner_log_interval:
+            if time - self.log_train_stats_t[
+                id] >= self.args.runner_log_interval:
                 log_prefix_ = log_prefix + "agent_id_" + str(id) + "_"
                 self._log(cur_returns[id], cur_stats[id], log_prefix_, time)
 
                 if hasattr(self.agent_dict[id]["mac"], "action_selector") and \
                         hasattr(self.agent_dict[id]["mac"].action_selector,
-                           "epsilon"):
+                                "epsilon"):
                     self.logger.log_stat("agent_id_" + str(id) + "_epsilon",
                                          self.agent_dict[id][
                                              "mac"].action_selector.epsilon,
@@ -385,7 +464,6 @@ class ParallelRunnerPopulation(ParallelRunner):
         return self.batches, list_time, list_win
 
     def _log(self, returns, stats, prefix, time):
-
         if len(returns) > 0:
             self.logger.log_stat(prefix + "return_mean", np.mean(returns),
                                  time)
@@ -398,3 +476,35 @@ class ParallelRunnerPopulation(ParallelRunner):
                 self.logger.log_stat(prefix + k + "_mean",
                                      v / stats["n_episodes"], time)
         stats.clear()
+
+    # def _update_noise_returns(self, returns, noise, stats, test_mode):
+    #     "Update the list of noise returns."
+    #     print("_update_noise_returns")
+    #     print("returns", returns)
+    #     print("noise", noise)
+    #     print("stats", stats)
+    #     print("test_mode", test_mode)
+    #     print("self.noise_returns", self.noise_returns)
+    #     for n, r in zip(noise, returns):
+    #         n = int(np.argmax(n))
+    #         if n in self.noise_returns:
+    #             self.noise_returns[n].append(r)
+    #         else:
+    #             self.noise_returns[n] = [r]
+    #     if test_mode:
+    #         noise_won = self.noise_test_won
+    #     else:
+    #         noise_won = self.noise_train_won
+    #     if stats != [] and "battle_won" in stats[0]:
+    #         for n, info in zip(noise, stats):
+    #             if "battle_won" not in info:
+    #                 continue
+    #             print("n", n)
+    #             bw = info["battle_won"]
+    #             n = int(np.argmax(n))
+    #             print("bw", bw)
+    #             print("n", n)
+    #             if n in noise_won:
+    #                 noise_won[n].append(bw)
+    #             else:
+    #                 noise_won[n] = [bw]
