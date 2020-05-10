@@ -4,8 +4,8 @@
 # Global parameter, indep of agent type
 runner_function: "population"
 runner: "parallel_runner_population"
-batch_size_run: 2 # Number of env at the same time
-name: "population_qmix_vs_heuristic"
+batch_size_run: 8 # Number of env at the same time
+name: "population_maven_vs_heuristic"
 use_cuda: False
 
 matchmaking: "duo_fair"
