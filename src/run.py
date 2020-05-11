@@ -216,6 +216,9 @@ def run_population(args, logger):
 
     runner.setup(agent_dict=agent_dict, groups=groups, preprocess=preprocess)
 
+    if args.use_cuda:
+        runner.cuda()
+
     # start training
     last_test_T = -args.test_interval - 1
     last_log_T = 0
