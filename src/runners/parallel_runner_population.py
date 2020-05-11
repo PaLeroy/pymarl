@@ -411,7 +411,7 @@ class ParallelRunnerPopulation(ParallelRunner):
                 noise_for_this_agent= []
 
                 for id_match, match in enumerate(self.list_match):
-                    if list_canceled_match[idx_match]:
+                    if list_canceled_match[id_match]:
                         continue
                     if match[0] == team_id:
                         returns_for_this_agent. \
