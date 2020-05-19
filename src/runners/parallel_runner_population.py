@@ -486,7 +486,6 @@ class ParallelRunnerPopulation(ParallelRunner):
                     id = k
                     time = self.agent_timer[id]
                     log_prefix_ = log_prefix + "agent_id_" + str(id) + "_"
-                    print("stats-id", cur_stats[id], id)
                     self._log(cur_returns[id], cur_stats[id], log_prefix_,
                               time)
         else:
