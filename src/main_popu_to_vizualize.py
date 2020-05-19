@@ -212,9 +212,15 @@ def run_population_test(args, logger):
             exit()
     if args.matchmaking == "single":
         agent_dict[0]["load_timesteps"]=sorted(agent_dict[0]["load_timesteps"])
+        cptaze = args.n_skip
         for idx_, timestep_to_load in enumerate(agent_dict[0]["load_timesteps"]):
-            if timestep_to_load < 3000000:
+            # if timestep_to_load < 7500000:
+            #     continue
+            if cptaze != args.n_skip:
+                cptaze += 1
                 continue
+            else:
+                cptaze = 0
             print("timestep_to_load", timestep_to_load)
             model_path = os.path.join(agent_dict[0]['args_sn'].checkpoint_path,
                                       str(timestep_to_load))

@@ -368,21 +368,62 @@ class ParallelRunnerPopulation(ParallelRunner):
                 cur_stats[team_id1]["won"] \
                     = 1 + cur_stats[team_id1].get(
                     "won", 0)
+                cur_stats[team_id1]["defeat"] \
+                    = 0 + cur_stats[team_id1].get(
+                    "defeat", 0)
+                cur_stats[team_id1]["draw"] \
+                    = 0 + cur_stats[team_id1].get(
+                    "draw", 0)
+
                 cur_stats[team_id2]["defeat"] \
                     = 1 + cur_stats[team_id2].get(
                     "defeat", 0)
+                cur_stats[team_id2]["won"] \
+                    = 0 + cur_stats[team_id2].get(
+                    "won", 0)
+                cur_stats[team_id2]["draw"] \
+                    = 0+ cur_stats[team_id2].get(
+                    "draw", 0)
+
+
 
             elif env_info_team2["battle_won_team_2"]:
                 cur_stats[team_id2]["won"] \
                     = 1 + cur_stats[team_id2].get(
                     "won", 0)
+                cur_stats[team_id2]["defeat"] \
+                    = 0 + cur_stats[team_id2].get(
+                    "defeat", 0)
+                cur_stats[team_id2]["draw"] \
+                    = 0 + cur_stats[team_id2].get(
+                    "draw", 0)
+
                 cur_stats[team_id1]["defeat"] \
                     = 1 + cur_stats[team_id1].get(
                     "defeat", 0)
+                cur_stats[team_id1]["won"] \
+                    = 0 + cur_stats[team_id1].get(
+                    "won", 0)
+                cur_stats[team_id1]["draw"] \
+                    = 0 + cur_stats[team_id1].get(
+                    "draw", 0)
             else:
+                cur_stats[team_id1]["defeat"] \
+                    = 0 + cur_stats[team_id1].get(
+                    "defeat", 0)
+                cur_stats[team_id1]["won"] \
+                    = 0 + cur_stats[team_id1].get(
+                    "won", 0)
                 cur_stats[team_id1]["draw"] \
                     = 1 + cur_stats[team_id1].get(
                     "draw", 0)
+
+                cur_stats[team_id2]["won"] \
+                    = 0 + cur_stats[team_id2].get(
+                    "won", 0)
+                cur_stats[team_id2]["defeat"] \
+                    = 0 + cur_stats[team_id2].get(
+                    "defeat", 0)
                 cur_stats[team_id2]["draw"] \
                     = 1 + cur_stats[team_id2].get(
                     "draw", 0)
@@ -445,24 +486,25 @@ class ParallelRunnerPopulation(ParallelRunner):
                     id = k
                     time = self.agent_timer[id]
                     log_prefix_ = log_prefix + "agent_id_" + str(id) + "_"
+                    print("stats-id", cur_stats[id], id)
                     self._log(cur_returns[id], cur_stats[id], log_prefix_,
                               time)
+        else:
+            for id, _ in self.agent_dict.items():
+                time = self.agent_timer[id]
+                if time - self.log_train_stats_t[
+                    id] >= self.args.runner_log_interval:
+                    log_prefix_ = log_prefix + "agent_id_" + str(id) + "_"
+                    self._log(cur_returns[id], cur_stats[id], log_prefix_, time)
 
-        for id, _ in self.agent_dict.items():
-            time = self.agent_timer[id]
-            if time - self.log_train_stats_t[
-                id] >= self.args.runner_log_interval:
-                log_prefix_ = log_prefix + "agent_id_" + str(id) + "_"
-                self._log(cur_returns[id], cur_stats[id], log_prefix_, time)
-
-                if hasattr(self.agent_dict[id]["mac"], "action_selector") and \
-                        hasattr(self.agent_dict[id]["mac"].action_selector,
-                                "epsilon"):
-                    self.logger.log_stat("agent_id_" + str(id) + "_epsilon",
-                                         self.agent_dict[id][
-                                             "mac"].action_selector.epsilon,
-                                         time)
-                self.log_train_stats_t[id] = time
+                    if hasattr(self.agent_dict[id]["mac"], "action_selector") and \
+                            hasattr(self.agent_dict[id]["mac"].action_selector,
+                                    "epsilon"):
+                        self.logger.log_stat("agent_id_" + str(id) + "_epsilon",
+                                             self.agent_dict[id][
+                                                 "mac"].action_selector.epsilon,
+                                             time)
+                    self.log_train_stats_t[id] = time
 
         return self.batches, list_time, list_win
 
