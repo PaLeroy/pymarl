@@ -4,11 +4,11 @@
 # Global parameter, indep of agent type
 runner_function: "population"
 runner: "parallel_runner_population"
-batch_size_run: 4 # Number of env at the same time
-name: "population_duo_qmix_close"
+batch_size_run: 10 # Number of env at the same time
+name: "population_duo_qmix_500"
 
 
-use_cuda: True
+use_cuda: False
 
 matchmaking: "duo"
 
@@ -19,20 +19,25 @@ use_tensorboard: True
 
 n_agent_type: 1
 
-log_interval: 2000
-runner_log_interval: 2000
-learner_log_interval: 2000
+log_interval: 20000
+runner_log_interval: 20000
+learner_log_interval: 20000
+
+t_max: 20050000
+test_interval: 20000
+test_greedy: False
+
 agent_type_1:
   number: 2 # number of agent of this type in the population
   mac: "basic_mac"
   action_selector: "epsilon_greedy"
   epsilon_start: 1.0
   epsilon_finish: 0.05
-  epsilon_anneal_time: 500000
+  epsilon_anneal_time: 2000000
 
   gamma: 0.99
 
-  buffer_size: 5000
+  buffer_size: 500
 
   target_update_interval: 200
 

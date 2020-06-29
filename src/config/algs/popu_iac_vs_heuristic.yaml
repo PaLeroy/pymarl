@@ -5,7 +5,7 @@
 runner_function: "population"
 runner: "parallel_runner_population"
 batch_size_run: 8 # Number of env at the same time
-name: "population_iql_vs_heuristic"
+name: "population_iac_vs_heuristic"
 use_cuda: False
 
 matchmaking: "duo_fair"
@@ -27,31 +27,34 @@ test_nepisode: 8
 test_greedy: False
 
 agent_type_1:
-  number: 1 # number of agent of this type in the population
+  number: 1
   mac: "basic_mac"
-  action_selector: "epsilon_greedy"
-  epsilon_start: 1.0
-  epsilon_finish: 0.05
-  epsilon_anneal_time: 2000000
+  action_selector: "multinomial"
+  epsilon_start: .5
+  epsilon_finish: .01
+  epsilon_anneal_time: 100000
+  mask_before_softmax: False
 
   gamma: 0.99
 
-  buffer_size: 5000
+  buffer_size: 8
 
+  # update the target network every {} training steps
   target_update_interval: 200
 
-  agent_output_type: "q"
-  learner: "q_learner"
-  double_q: True
-  mixer:
+  lr: 0.0005
+  critic_lr: 0.0005
+  td_lambda: 0.8
 
-  learner_log_interval: 2000 # Log training stats every {} timesteps
+  # use COMA
+  agent_output_type: "pi_logits"
+  learner: "iac_learner"
+
+  learner_log_interval: 20000 # Log training stats every {} timesteps
 
 
   # --- RL hyperparameters ---
-  batch_size: 32 # Number of episodes to train on
-  lr: 0.0005 # Learning rate for agents
-  critic_lr: 0.0005 # Learning rate for critics
+  batch_size: 8 # Number of episodes to train on
   optim_alpha: 0.99 # RMSProp alpha
   optim_eps: 0.00001 # RMSProp epsilon
   grad_norm_clip: 10 # Reduce magnitude of gradients above this L2 norm
