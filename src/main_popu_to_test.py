@@ -97,6 +97,7 @@ def run_test(_run, _config, _log):
     # Making sure framework really exits
     os._exit(os.EX_OK)
 
+
 def run_population_test(args, logger):
     # Creation of the agents dictionary
     agent_dict = {}
@@ -124,6 +125,7 @@ def run_population_test(args, logger):
                 save_model_interval[j]
             args_this_agent_modified["checkpoint_path"] = checkpoint_path[j]
             args_this_agent_modified["load_step"] = load_step[j]
+            args_this_agent_modified["batch_size_run"] = args.batch_size_run
             new_agent = {
                 'id': agent_id,
                 'args_sn': SN(**args_this_agent_modified)
@@ -135,22 +137,26 @@ def run_population_test(args, logger):
                                      agent_dict=agent_dict)
 
     env_info = runner.get_env_info()
-    print("env_info", env_info)
-    # Take care that env info is made for 2 teams (-> obs is a tuple)
-
     args.n_agents = env_info["n_agents"]
     args.n_actions = env_info["n_actions"]
     args.state_shape = env_info["state_shape"]
 
-    scheme_buffer = {
-        "state": {"vshape": env_info["state_shape"]},
-        "obs": {"vshape": env_info["obs_shape"][0], "group": "agents"},
-        "actions": {"vshape": (1,), "group": "agents", "dtype": th.long},
-        "avail_actions": {"vshape": (env_info["n_actions"],),
-                          "group": "agents", "dtype": th.int},
-        "reward": {"vshape": (1,)},
-        "terminated": {"vshape": (1,), "dtype": th.uint8},
-    }
+    for k, v in agent_dict.items():
+        # noinspection DuplicatedCode
+        scheme = {"state": {"vshape": env_info["state_shape"]},
+                  "obs": {"vshape": env_info["obs_shape"][0],
+                          "group": "agents"},
+                  "actions": {"vshape": (1,), "group": "agents",
+                              "dtype": th.long},
+                  "avail_actions": {"vshape": (env_info["n_actions"],),
+                                    "group": "agents", "dtype": th.int},
+                  "reward": {"vshape": (1,)},
+                  "terminated": {"vshape": (1,), "dtype": th.uint8},
+                  }
+        if agent_dict[k]['args_sn'].mac == "maven_mac":
+            scheme["noise"] = {"vshape": (agent_dict[k]['args_sn'].noise_dim,)}
+
+        agent_dict[k]['scheme_buffer'] = scheme
 
     groups = {
         "agents": args.n_agents,
@@ -159,16 +165,14 @@ def run_population_test(args, logger):
         "actions": ("actions_onehot", [OneHot(out_dim=args.n_actions)])
     }
 
-    buffer = ReplayBufferPopulation(scheme_buffer,
-                                    groups,
+    buffer = ReplayBufferPopulation(groups,
                                     args.buffer_size,
                                     env_info["episode_limit"] + 1,
                                     agent_dict,
                                     preprocess=preprocess,
                                     device="cpu"
                                     if args.buffer_cpu_only else args.device)
-    match_maker = m_REGISTRY[args.matchmaking](agent_dict)
-    print(scheme_buffer)
+
     for k, v in agent_dict.items():
         agent_dict[k]['args_sn'].n_agents = env_info["n_agents"]
         agent_dict[k]['args_sn'].n_actions = env_info["n_actions"]
@@ -184,6 +188,7 @@ def run_population_test(args, logger):
             buffer.scheme,
             logger, agent_dict[k]['args_sn'], id_agent=str(k))
         agent_dict[k]['t_total'] = 0
+        agent_dict[k]['episode'] = 0
         agent_dict[k]['model_save_time'] = 0
 
         if args.use_cuda:
@@ -192,99 +197,149 @@ def run_population_test(args, logger):
         checkpoint_path_ = agent_dict[k]['args_sn'].checkpoint_path
         agent_dict[k]["load_timesteps"] = []
         if checkpoint_path_ != "":
-
             if not os.path.isdir(checkpoint_path_):
                 logger.console_logger.info(
                     "Checkpoint directory {} doesn't exist".format(
                         checkpoint_path_))
                 return
-
             # Go through all files in args.checkpoint_path
             for name in os.listdir(checkpoint_path_):
                 full_name = os.path.join(checkpoint_path_, name)
                 # Check if they are dirs the names of which are numbers
-
                 if os.path.isdir(full_name) and name.isdigit():
                     agent_dict[k]["load_timesteps"].append(int(name))
 
+        elif agent_dict[k]['args_sn'].mac == "do_not_mac":
+            pass
         else:
             logger.console_logger.info("Checkpoint directory doesn't exist")
             exit()
-    if args.matchmaking == "single":
-        agent_dict[0]["load_timesteps"]=sorted(agent_dict[0]["load_timesteps"])
-        cptaze = args.n_skip
-        for idx_, timestep_to_load in enumerate(agent_dict[0]["load_timesteps"]):
-            # if timestep_to_load < 7500000:
-            #     continue
-            if cptaze != args.n_skip:
-                cptaze += 1
-                continue
-            else:
-                cptaze = 0
-            print("timestep_to_load", timestep_to_load)
-            model_path = os.path.join(agent_dict[0]['args_sn'].checkpoint_path,
-                                      str(timestep_to_load))
 
-            logger.console_logger.info(
-                "Loading model from {}".format(model_path))
-            agent_dict[0]['learner'].load_models(model_path)
-            agent_dict[0]['t_total'] = timestep_to_load
-            if args.evaluate or args.save_replay:
-                evaluate_sequential(args, runner)
-                return
+    match_maker = m_REGISTRY[args.matchmaking](agent_dict)
 
-            runner.setup(scheme=scheme_buffer, groups=groups,
-                         preprocess=preprocess)
-
-            for _ in range(args.n_epsiode_per_test):
-                # Run for a whole episode at a time
-                list_episode_matches = match_maker.list_combat(agent_dict,
-                                                               n_matches=args.batch_size_run)
-                runner.setup_agents(list_episode_matches, agent_dict)
-                episode_batches, total_times, win_list = runner.run(
-                    test_mode=True)
-                print(win_list)
-
-    if args.matchmaking == "duo":
+    if args.matchmaking == "duo_fair":
+        # Only 2 agents
+        # TODO: Only 1 trained agent fo now
         agent_dict[0]["load_timesteps"] = sorted(
             agent_dict[0]["load_timesteps"])
+        agent_dict[1]["load_timesteps"] = sorted(
+            agent_dict[1]["load_timesteps"])
+        print("load_timesteps_team_1=", agent_dict[0]["load_timesteps"])
+        print("load_timesteps_team_2=", agent_dict[1]["load_timesteps"])
+
+        load_factor = 0
         for idx_, timestep_to_load in enumerate(
                 agent_dict[0]["load_timesteps"]):
-            # if timestep_to_load < 4000000:
-            #     continue
+            if timestep_to_load < load_factor * args.load_timesteps_spacing:
+                continue
+            else:
+                load_factor += 1
             print("timestep_to_load", timestep_to_load)
-            model_path1 = os.path.join(agent_dict[0]['args_sn'].checkpoint_path,
-                                      str(timestep_to_load))
-            logger.console_logger.info("Loading model from {}".format(model_path1))
+            model_path1 = os.path.join(
+                agent_dict[0]['args_sn'].checkpoint_path,
+                str(timestep_to_load))
+            logger.console_logger.info(
+                "Loading model from {}".format(model_path1))
             agent_dict[0]['learner'].load_models(model_path1)
             agent_dict[0]['t_total'] = timestep_to_load
 
-            model_path2 = os.path.join(agent_dict[1]['args_sn'].checkpoint_path,
+            model_path2 = os.path.join(
+                agent_dict[1]['args_sn'].checkpoint_path,
                 str(timestep_to_load))
             logger.console_logger.info(
                 "Loading model from {}".format(model_path2))
             agent_dict[1]['learner'].load_models(model_path2)
             agent_dict[1]['t_total'] = timestep_to_load
 
-            if args.evaluate or args.save_replay:
-                evaluate_sequential(args, runner)
-                return
 
-            runner.setup(scheme=scheme_buffer, groups=groups,
+            runner.setup(agent_dict=agent_dict, groups=groups,
                          preprocess=preprocess)
-
-            for _ in range(args.n_epsiode_per_test):
+            cur_tested = 0
+            while cur_tested < args.test_nepisode:
                 # Run for a whole episode at a time
                 list_episode_matches = match_maker.list_combat(agent_dict,
                                                                n_matches=args.batch_size_run)
                 runner.setup_agents(list_episode_matches, agent_dict)
                 episode_batches, total_times, win_list = runner.run(
                     test_mode=True)
-                print(win_list)
+                cur_tested += len(win_list)
+
+    # if args.matchmaking == "single":
+    #     agent_dict[0]["load_timesteps"] = sorted(
+    #         agent_dict[0]["load_timesteps"])
+    #     cptaze = args.n_skip
+    #     for idx_, timestep_to_load in enumerate(
+    #             agent_dict[0]["load_timesteps"]):
+    #         # if timestep_to_load < 7500000:
+    #         #     continue
+    #         if cptaze != args.n_skip:
+    #             cptaze += 1
+    #             continue
+    #         else:
+    #             cptaze = 0
+    #         print("timestep_to_load", timestep_to_load)
+    #         model_path = os.path.join(agent_dict[0]['args_sn'].checkpoint_path,
+    #                                   str(timestep_to_load))
+    #
+    #         logger.console_logger.info(
+    #             "Loading model from {}".format(model_path))
+    #         agent_dict[0]['learner'].load_models(model_path)
+    #         agent_dict[0]['t_total'] = timestep_to_load
+    #
+    #         runner.setup(scheme=scheme_buffer, groups=groups,
+    #                      preprocess=preprocess)
+    #
+    #         for _ in range(args.n_epsiode_per_test):
+    #             # Run for a whole episode at a time
+    #             list_episode_matches = match_maker.list_combat(agent_dict,
+    #                                                            n_matches=args.batch_size_run)
+    #             runner.setup_agents(list_episode_matches, agent_dict)
+    #             # episode_batches, total_times, win_list = runner.run(
+    #             #     test_mode=True)
+    #             # print(win_list)
+    #
+    # if args.matchmaking == "duo":
+    #     agent_dict[0]["load_timesteps"] = sorted(
+    #         agent_dict[0]["load_timesteps"])
+    #     for idx_, timestep_to_load in enumerate(
+    #             agent_dict[0]["load_timesteps"]):
+    #         # if timestep_to_load < 4000000:
+    #         #     continue
+    #         print("timestep_to_load", timestep_to_load)
+    #         model_path1 = os.path.join(
+    #             agent_dict[0]['args_sn'].checkpoint_path,
+    #             str(timestep_to_load))
+    #         logger.console_logger.info(
+    #             "Loading model from {}".format(model_path1))
+    #         agent_dict[0]['learner'].load_models(model_path1)
+    #         agent_dict[0]['t_total'] = timestep_to_load
+    #
+    #         model_path2 = os.path.join(
+    #             agent_dict[1]['args_sn'].checkpoint_path,
+    #             str(timestep_to_load))
+    #         logger.console_logger.info(
+    #             "Loading model from {}".format(model_path2))
+    #         agent_dict[1]['learner'].load_models(model_path2)
+    #         agent_dict[1]['t_total'] = timestep_to_load
+    #
+    #
+    #         runner.setup(scheme=scheme_buffer, groups=groups,
+    #                      preprocess=preprocess)
+    #
+    #         for _ in range(args.n_epsiode_per_test):
+    #             # Run for a whole episode at a time
+    #             list_episode_matches = match_maker.list_combat(agent_dict,
+    #                                                            n_matches=args.batch_size_run)
+    #             runner.setup_agents(list_episode_matches, agent_dict)
+    #             episode_batches, total_times, win_list = runner.run(
+    #                 test_mode=True)
+    #             print(win_list)
     else:
         logger.console_logger.info("Unknown matchmaking")
         exit()
 
+    runner.close_env()
+    logger.console_logger.info("Finished Testing")
 if __name__ == '__main__':
     params = deepcopy(sys.argv)
 
