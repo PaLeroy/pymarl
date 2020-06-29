@@ -408,7 +408,7 @@ class ParallelRunnerPopulation(ParallelRunner):
             if v['args_sn'].mac == "maven_mac":
                 returns_for_this_agent = []
                 init_states_for_this_agent = []
-                noise_for_this_agent= []
+                noise_for_this_agent = []
 
                 for id_match, match in enumerate(self.list_match):
                     if list_canceled_match[id_match]:

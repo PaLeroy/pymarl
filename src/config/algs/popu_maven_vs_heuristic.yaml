@@ -39,7 +39,7 @@ agent_type_1:
   action_selector: "epsilon_greedy"
   epsilon_start: 1.0
   epsilon_finish: 0.05
-  epsilon_anneal_time: 50000
+  epsilon_anneal_time: 2000000
 
   agent_output_type: "q"
   learner: "maven_learner"

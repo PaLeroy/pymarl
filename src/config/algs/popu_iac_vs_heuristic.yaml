@@ -6,7 +6,7 @@ runner_function: "population"
 runner: "parallel_runner_population"
 batch_size_run: 8 # Number of env at the same time
 name: "population_iql_vs_heuristic"
-use_cuda: False
+use_cuda: True
 
 matchmaking: "duo_fair"
 
