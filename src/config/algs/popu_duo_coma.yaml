@@ -5,7 +5,6 @@
 runner_function: "population"
 runner: "parallel_runner_population"
 batch_size_run: 8 # Number of env at the same time
-
 name: "population_duo_coma"
 
 use_cuda: False
@@ -19,9 +18,15 @@ use_tensorboard: True
 
 n_agent_type: 1
 
-log_interval: 2000
-runner_log_interval: 2000
-learner_log_interval: 2000
+log_interval: 20000
+runner_log_interval: 20000
+learner_log_interval: 20000
+
+t_max: 20050000
+test_interval: 20000
+test_nepisode: 10
+test_greedy: False
+
 agent_type_1:
     number: 2
     mac: "basic_mac"
@@ -68,7 +73,11 @@ agent_type_1:
 
     # --- Logging options ---
     save_model: [True, True] # Save the models to disk
+<<<<<<< HEAD
     save_model_interval: [200000, 200000] # Save models after this many timesteps
+=======
+    save_model_interval: [20000, 20000] # Save models after this many timesteps
+>>>>>>> c1a060b7a69b53dc7a9e42f556c6dc5f17aa4cad
     checkpoint_path: ["", ""] # Load a checkpoint from this path
     load_step: [0, 0] # Load model trained on this many timesteps (0 if choose max possible)
 

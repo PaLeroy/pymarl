@@ -4,9 +4,11 @@
 # Global parameter, indep of agent type
 runner_function: "population"
 runner: "parallel_runner_population"
-batch_size_run: 8 # Number of env at the same time
-name: "population_iac_vs_heuristic"
+batch_size_run: 2 # Number of env at the same time
+name: "population_qmix_vs_heuristic_test"
 use_cuda: False
+
+load_timesteps_spacing: 100000
 
 matchmaking: "duo_fair"
 
@@ -23,38 +25,36 @@ learner_log_interval: 20000
 
 t_max: 20050000
 test_interval: 20000
-test_nepisode: 8
+test_nepisode: 10
 test_greedy: False
 
 agent_type_1:
-  number: 1
+  number: 1 # number of agent of this type in the population
   mac: "basic_mac"
-  action_selector: "multinomial"
-  epsilon_start: .5
-  epsilon_finish: .01
-  epsilon_anneal_time: 100000
-  mask_before_softmax: False
+  action_selector: "epsilon_greedy"
+  epsilon_start: 1.0
+  epsilon_finish: 0.05
+  epsilon_anneal_time: 2000000
 
   gamma: 0.99
 
-  buffer_size: 8
+  buffer_size: 5000
 
-  # update the target network every {} training steps
   target_update_interval: 200
 
-  lr: 0.0005
-  critic_lr: 0.0005
-  td_lambda: 0.8
-
-  # use COMA
-  agent_output_type: "pi_logits"
-  learner: "iac_learner"
+  agent_output_type: "q"
+  learner: "q_learner"
+  double_q: True
+  mixer: "qmix"
+  mixing_embed_dim: 32
 
   learner_log_interval: 20000 # Log training stats every {} timesteps
 
 
   # --- RL hyperparameters ---
-  batch_size: 8 # Number of episodes to train on
+  batch_size: 32 # Number of episodes to train on
+  lr: 0.0005 # Learning rate for agents
+  critic_lr: 0.0005 # Learning rate for critics
   optim_alpha: 0.99 # RMSProp alpha
   optim_eps: 0.00001 # RMSProp epsilon
   grad_norm_clip: 10 # Reduce magnitude of gradients above this L2 norm
@@ -68,7 +68,7 @@ agent_type_1:
   # --- Logging options ---
   save_model: [True] # Save the models to disk
   save_model_interval: [20000] # Save models after this many timesteps
-  checkpoint_path: [""] # Load a checkpoint from this path
+  checkpoint_path: ["/Users/pascalleroy/Documents/Sc2/results/population_qmix_vs_heuristic__2020-04-15_10-19-47/agent_id_0"] # Load a checkpoint from this path
   load_step: [0] # Load model trained on this many timesteps (0 if choose max possible)
 
 
