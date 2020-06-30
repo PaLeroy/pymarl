@@ -127,7 +127,6 @@ class COMALearner:
         target_q_vals = self.target_critic(batch)[:, :]
         targets_taken = th.gather(target_q_vals, dim=3, index=actions).squeeze(
             3)
-
         # Calculate td-lambda targets
         targets = build_td_lambda_targets(rewards, terminated, mask,
                                           targets_taken, self.n_agents,

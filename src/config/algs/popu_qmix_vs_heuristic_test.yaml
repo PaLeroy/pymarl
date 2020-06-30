@@ -8,7 +8,7 @@ batch_size_run: 2 # Number of env at the same time
 name: "population_qmix_vs_heuristic_test"
 use_cuda: False
 
-load_timesteps_spacing: 100000
+load_timesteps_spacing: 0
 
 matchmaking: "duo_fair"
 

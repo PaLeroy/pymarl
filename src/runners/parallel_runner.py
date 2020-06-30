@@ -90,7 +90,6 @@ class ParallelRunner:
 
     def run(self, test_mode=False):
         self.reset()
-
         all_terminated = False
         episode_returns = [0 for _ in range(self.batch_size)]
         episode_lengths = [0 for _ in range(self.batch_size)]
@@ -123,6 +122,7 @@ class ParallelRunner:
                 if idx in envs_not_terminated:  # We produced actions for this env
                     if not terminated[idx]:
                         # Only send the actions to the env if it hasn't terminated
+
                         parent_conn.send(("step", cpu_actions[action_idx]))
                     action_idx += 1  # actions is not a list over every env
 
