@@ -219,37 +219,42 @@ def run_population_test(args, logger):
 
     if args.matchmaking == "duo_fair":
         # Only 2 agents
-        # TODO: Only 1 trained agent fo now
         agent_dict[0]["load_timesteps"] = sorted(
             agent_dict[0]["load_timesteps"])
         agent_dict[1]["load_timesteps"] = sorted(
             agent_dict[1]["load_timesteps"])
         print("load_timesteps_team_1=", agent_dict[0]["load_timesteps"])
         print("load_timesteps_team_2=", agent_dict[1]["load_timesteps"])
-
-        load_factor = 0
-        for idx_, timestep_to_load in enumerate(
-                agent_dict[0]["load_timesteps"]):
-            if timestep_to_load < load_factor * args.load_timesteps_spacing:
+        load_factor_team1 = 0
+        load_factor_team2 = 0
+        for idx_, (timestep_to_load1, timestep_to_load2) in enumerate(zip(
+                agent_dict[0]["load_timesteps"], agent_dict[1]["load_timesteps"])):
+            if timestep_to_load1 < load_factor_team1 * args.load_timesteps_spacing:
                 continue
             else:
-                load_factor += 1
-            print("timestep_to_load", timestep_to_load)
+                load_factor_team1 += 1
+
+            if timestep_to_load2 < load_factor_team2 * args.load_timesteps_spacing:
+                continue
+            else:
+                load_factor_team2 += 1
+
+            print("timestep_to_load", timestep_to_load1, timestep_to_load2)
             model_path1 = os.path.join(
                 agent_dict[0]['args_sn'].checkpoint_path,
-                str(timestep_to_load))
+                str(timestep_to_load1))
             logger.console_logger.info(
                 "Loading model from {}".format(model_path1))
             agent_dict[0]['learner'].load_models(model_path1)
-            agent_dict[0]['t_total'] = timestep_to_load
+            agent_dict[0]['t_total'] = timestep_to_load1
 
             model_path2 = os.path.join(
                 agent_dict[1]['args_sn'].checkpoint_path,
-                str(timestep_to_load))
+                str(timestep_to_load2))
             logger.console_logger.info(
                 "Loading model from {}".format(model_path2))
             agent_dict[1]['learner'].load_models(model_path2)
-            agent_dict[1]['t_total'] = timestep_to_load
+            agent_dict[1]['t_total'] = timestep_to_load2
 
 
             runner.setup(agent_dict=agent_dict, groups=groups,
