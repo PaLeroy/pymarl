@@ -4,11 +4,11 @@
 # Global parameter, indep of agent type
 runner_function: "population"
 runner: "parallel_runner_population"
-batch_size_run: 2 # Number of env at the same time
-name: "population_qmix_vs_heuristic_test"
+batch_size_run: 8 # Number of env at the same time
+name: "population_test_vs_heuristic_alone_qmix_10"
 use_cuda: False
 
-load_timesteps_spacing: 0
+load_timesteps_spacing: 200000 #nb of timesteps between two tests
 
 matchmaking: "duo_fair"
 
@@ -25,7 +25,7 @@ learner_log_interval: 20000
 
 t_max: 20050000
 test_interval: 20000
-test_nepisode: 10
+test_nepisode: 20
 test_greedy: False
 
 agent_type_1:
@@ -68,7 +68,7 @@ agent_type_1:
   # --- Logging options ---
   save_model: [True] # Save the models to disk
   save_model_interval: [20000] # Save models after this many timesteps
-  checkpoint_path: ["/Users/pascalleroy/Documents/Sc2/results/population_qmix_vs_heuristic__2020-04-15_10-19-47/agent_id_0"] # Load a checkpoint from this path
+  checkpoint_path: ["/home/pascal/sc2/backup_results_wartank/models/population_alone_qmix_10/agent_id_0"] # Load a checkpoint from this path
   load_step: [0] # Load model trained on this many timesteps (0 if choose max possible)
 
 
