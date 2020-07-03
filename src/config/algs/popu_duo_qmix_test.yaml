@@ -5,7 +5,7 @@
 runner_function: "population"
 runner: "parallel_runner_population"
 batch_size_run: 8 # Number of env at the same time
-name: "population_duo_qmix_A1_vs_H2"
+name: "population_duo_qmix_A6_vs_H6"
 use_cuda: False
 
 load_timesteps_spacing: 200000 #nb of timesteps between two tests
@@ -68,5 +68,5 @@ agent_type_1:
   # --- Logging options ---
   save_model: [True, True] # Save the models to disk
   save_model_interval: [20000, 20000] # Save models after this many timesteps
-  checkpoint_path: ["/Users/pascalleroy/Documents/Sc2/backup_results_wartank/models/population_alone_qmix_1/agent_id_0", "/Users/pascalleroy/Documents/Sc2/backup_results_wartank/models/population_qmix_vs_heuristic_2/agent_id_0"] # Load a checkpoint from this path
+  checkpoint_path: ["", ""] # Load a checkpoint from this path
   load_step: [0, 0] # Load model trained on this many timesteps (0 if choose max possible)
