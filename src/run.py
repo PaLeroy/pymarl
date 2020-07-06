@@ -282,6 +282,7 @@ def run_population(args, logger):
                     "Saving models to {}".format(save_path))
 
                 agent_dict[agent_id]['learner'].save_models(save_path)
+                runner.save_models(save_path, agent_id, agent_dict)
 
         if (min_played_times - last_test_T) / args.test_interval >= 1.0:
             logger.console_logger.info(

@@ -56,6 +56,11 @@ class ParallelRunnerPopulation(ParallelRunner):
             if v['args_sn'].mac == "maven_mac":
                 self.noise_distrib[k].cuda()
 
+    def save_models(self, save_path, agent_id, agent_dict):
+        args_sn = agent_dict[agent_id]['args_sn']
+        if args_sn.mac == "maven_mac" and args_sn.noise_bandit:
+            self.noise_distrib[agent_id].save_model(save_path)
+
     def setup(self, agent_dict, groups, preprocess):
         for k, v in agent_dict.items():
             self.new_batch[k] = partial(EpisodeBatch, v['scheme_buffer'],
@@ -79,6 +84,7 @@ class ParallelRunnerPopulation(ParallelRunner):
                     self.noise_distrib[k] = Uniform(dict_args)
             else:
                 self.noise_distrib[k] = None
+
 
     def setup_agents(self, list_match, agent_dict):
         # To be called between each episode
@@ -451,9 +457,13 @@ class ParallelRunnerPopulation(ParallelRunner):
                 init_states_for_this_agent = []
                 noise_for_this_agent = []
 
+                if not any(team_id in match for match in self.list_match):
+                    continue
+
                 for id_match, match in enumerate(self.list_match):
                     if list_canceled_match[id_match]:
                         continue
+
                     if match[0] == team_id:
                         returns_for_this_agent. \
                             append(episode_returns[id_match][0])
