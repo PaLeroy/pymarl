@@ -228,18 +228,24 @@ def run_population_test(args, logger):
         if len(agent_dict[1]["load_timesteps"]) > 0:
             load_factor_team1 = 0
             load_factor_team2 = 0
-            for idx_, (timestep_to_load1, timestep_to_load2) in enumerate(zip(
-                    agent_dict[0]["load_timesteps"], agent_dict[1]["load_timesteps"])):
-                if timestep_to_load1 < load_factor_team1 * args.load_timesteps_spacing:
-                    continue
+            idx_team1=0
+            idx_team2=0
+            time_steps_team1 = agent_dict[0]["load_timesteps"]
+            time_steps_team2 = agent_dict[1]["load_timesteps"]
+            while idx_team1 < len(time_steps_team1) and idx_team2 < len(time_steps_team2):
+                timestep_to_load1 = time_steps_team1[idx_team1]
+                while idx_team1 < len(time_steps_team1) and timestep_to_load1 < load_factor_team1 * args.load_timesteps_spacing:
+                    timestep_to_load1 = time_steps_team1[idx_team1]
+                    idx_team1 += 1
                 else:
                     load_factor_team1 += 1
 
-                if timestep_to_load2 < load_factor_team2 * args.load_timesteps_spacing:
-                    continue
+                timestep_to_load2 = time_steps_team2[idx_team2]
+                while idx_team2 < len(time_steps_team2) and timestep_to_load2 < load_factor_team2 * args.load_timesteps_spacing:
+                    timestep_to_load2 = time_steps_team2[idx_team2]
+                    idx_team2 += 1
                 else:
                     load_factor_team2 += 1
-
                 print("timestep_to_load", timestep_to_load1, timestep_to_load2)
                 model_path1 = os.path.join(
                     agent_dict[0]['args_sn'].checkpoint_path,
