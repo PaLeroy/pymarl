@@ -25,8 +25,7 @@ class Logger:
 
     def log_stat(self, key, value, t, to_sacred=True):
         self.stats[key].append((t, value))
-
-        if self.use_tb:
+        if self.use_tb and type(value) is not list:
             self.tb_logger(key, value, t)
 
         if self.use_sacred and to_sacred:

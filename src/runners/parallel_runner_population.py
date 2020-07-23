@@ -32,6 +32,8 @@ class ParallelRunnerPopulation(ParallelRunner):
         self.test_returns = {}
         self.train_stats = {}
         self.test_stats = {}
+        self.train_custom_stats = {}
+        self.test_custom_stats = {}
         self.log_train_stats_t = {}
         self.noise_returns = {}
         self.noise_test_won = {}
@@ -46,6 +48,8 @@ class ParallelRunnerPopulation(ParallelRunner):
             self.test_returns[k] = []
             self.train_stats[k] = {}
             self.test_stats[k] = {}
+            self.train_custom_stats[k] = {}
+            self.test_custom_stats[k] = {}
             self.log_train_stats_t[k] = -1000000
             self.noise_returns[k] = {}
             self.noise_test_won[k] = {}
@@ -84,7 +88,6 @@ class ParallelRunnerPopulation(ParallelRunner):
                     self.noise_distrib[k] = Uniform(dict_args)
             else:
                 self.noise_distrib[k] = None
-
 
     def setup_agents(self, list_match, agent_dict):
         # To be called between each episode
@@ -336,6 +339,7 @@ class ParallelRunnerPopulation(ParallelRunner):
                 list_canceled_match.append(False)
 
         cur_stats = self.test_stats if test_mode else self.train_stats
+        cur_custom_stats = self.test_custom_stats if test_mode else self.train_custom_stats
         cur_returns = self.test_returns if test_mode else self.train_returns
 
         log_prefix = "test_" if test_mode else ""
@@ -345,9 +349,28 @@ class ParallelRunnerPopulation(ParallelRunner):
             team_id1 = match[0]
             team_id2 = match[1]
             env_info = final_env_infos[idx_match]
+
+            custom_stats_team_1_dict = {
+                key: [val] for key, val in env_info.items() if
+                key.endswith("team_1_agent_0") or key.endswith("team_1_agent_1") or key.endswith("team_1_agent_2")
+            }
+            for key in list(env_info.keys()):
+                if key.endswith("team_1_agent_0") or key.endswith("team_1_agent_1") or key.endswith("team_1_agent_2"):
+                    del env_info[key]
+
+            custom_stats_team_2_dict = {
+                key: [val] for key, val in env_info.items() if
+                key.endswith("team_2_agent_0") or key.endswith("team_2_agent_1") or key.endswith("team_2_agent_2")
+            }
+            for key in list(env_info.keys()):
+                if key.endswith("team_2_agent_0") or key.endswith("team_2_agent_1") or key.endswith("team_2_agent_2"):
+                    del env_info[key]
+
+
             env_info_team1 = {
                 "battle_won_team_1": env_info["battle_won_team_1"],
-                "return_team_1": episode_returns[idx_match][0]}
+                "return_team_1": episode_returns[idx_match][0],
+            }
             env_info_team2 = {
                 "battle_won_team_2": env_info["battle_won_team_2"],
                 "return_team_2": episode_returns[idx_match][1]}
@@ -361,7 +384,10 @@ class ParallelRunnerPopulation(ParallelRunner):
                  in
                  set(cur_stats[team_id1]) | set(env_info) | set(
                      env_info_team1)})
-
+            cur_custom_stats[team_id1].update(
+                {k: cur_custom_stats[team_id1].get(k, []) + custom_stats_team_1_dict.get(k, []) for k in
+                 set(cur_custom_stats[team_id1]) | set(custom_stats_team_1_dict)}
+            )
             cur_stats[team_id2].update(
                 {k: cur_stats[team_id2].get(k, 0) + env_info.get(k,
                                                                  0) + env_info_team2.get(
@@ -370,6 +396,11 @@ class ParallelRunnerPopulation(ParallelRunner):
                  in
                  set(cur_stats[team_id2]) | set(env_info) | set(
                      env_info_team2)})
+            cur_custom_stats[team_id2].update(
+                {
+                    k: cur_custom_stats[team_id2].get(k, []) + custom_stats_team_2_dict.get(k, []) for k in
+                    set(cur_custom_stats[team_id2]) | set(custom_stats_team_2_dict)}
+            )
             if env_info_team1["battle_won_team_1"]:
                 cur_stats[team_id1]["won"] \
                     = 1 + cur_stats[team_id1].get(
@@ -388,10 +419,8 @@ class ParallelRunnerPopulation(ParallelRunner):
                     = 0 + cur_stats[team_id2].get(
                     "won", 0)
                 cur_stats[team_id2]["draw"] \
-                    = 0+ cur_stats[team_id2].get(
+                    = 0 + cur_stats[team_id2].get(
                     "draw", 0)
-
-
 
             elif env_info_team2["battle_won_team_2"]:
                 cur_stats[team_id2]["won"] \
@@ -467,7 +496,7 @@ class ParallelRunnerPopulation(ParallelRunner):
                     if match[0] == team_id:
                         returns_for_this_agent. \
                             append(episode_returns[id_match][0])
-                        init_states_for_this_agent.\
+                        init_states_for_this_agent. \
                             append(self.batches[id_match][0]["state"][:, 0])
                         noise_for_this_agent.append(self.batches[id_match][0]['noise'][:])
                     if match[1] == team_id:
@@ -477,7 +506,7 @@ class ParallelRunnerPopulation(ParallelRunner):
                             append(self.batches[id_match][1]["state"][:, 0])
                         noise_for_this_agent.append(self.batches[id_match][1]['noise'][:])
                 init_states_for_this_agent = th.stack(init_states_for_this_agent, dim=1)[0]
-                noise_for_this_agent = th.stack(noise_for_this_agent, dim=1)[0,0]
+                noise_for_this_agent = th.stack(noise_for_this_agent, dim=1)[0, 0]
                 time = self.agent_timer[team_id]
                 self.noise_distrib[team_id].update_returns(init_states_for_this_agent,
                                                            noise_for_this_agent,
@@ -497,7 +526,7 @@ class ParallelRunnerPopulation(ParallelRunner):
                     time = self.agent_timer[id]
                     log_prefix_ = log_prefix + "agent_id_" + str(id) + "_"
                     self._log(cur_returns[id], cur_stats[id], log_prefix_,
-                              time)
+                              time, cur_custom_stats[id])
         else:
             for id, _ in self.agent_dict.items():
                 time = self.agent_timer[id]
@@ -517,7 +546,7 @@ class ParallelRunnerPopulation(ParallelRunner):
 
         return self.batches, list_time, list_win
 
-    def _log(self, returns, stats, prefix, time):
+    def _log(self, returns, stats, prefix, time, custom_stats=None):
         if len(returns) > 0:
             self.logger.log_stat(prefix + "return_mean", np.mean(returns),
                                  time)
@@ -529,6 +558,10 @@ class ParallelRunnerPopulation(ParallelRunner):
             if k != "n_episodes":
                 self.logger.log_stat(prefix + k + "_mean",
                                      v / stats["n_episodes"], time)
+        for k, v in custom_stats.items():
+            self.logger.log_stat(prefix + k, v, time)
+
+        custom_stats.clear()
         stats.clear()
 
     # def _update_noise_returns(self, returns, noise, stats, test_mode):
