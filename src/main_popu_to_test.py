@@ -81,6 +81,7 @@ def run_test(_run, _config, _log):
 
     # Run and train
     run_population_test(args=args, logger=logger)
+    time.sleep(15) # To let sacred fileobserver write everything
 
     # Clean up after finishing
     print("Exiting Main")
