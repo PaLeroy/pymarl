@@ -255,6 +255,7 @@ def run_population_test(args, logger):
                     "Loading model from {}".format(model_path1))
                 agent_dict[0]['learner'].load_models(model_path1)
                 agent_dict[0]['t_total'] = timestep_to_load1
+                runner.load_models(model_path1, idx_team1, agent_dict[0])
 
                 model_path2 = os.path.join(
                     agent_dict[1]['args_sn'].checkpoint_path,
@@ -263,7 +264,7 @@ def run_population_test(args, logger):
                     "Loading model from {}".format(model_path2))
                 agent_dict[1]['learner'].load_models(model_path2)
                 agent_dict[1]['t_total'] = timestep_to_load2
-
+                runner.load_models(model_path2, idx_team2, agent_dict[1])
 
                 runner.setup(agent_dict=agent_dict, groups=groups,
                              preprocess=preprocess)
