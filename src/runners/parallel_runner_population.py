@@ -65,6 +65,11 @@ class ParallelRunnerPopulation(ParallelRunner):
         if args_sn.mac == "maven_mac" and args_sn.noise_bandit:
             self.noise_distrib[agent_id].save_model(save_path)
 
+    def load_models(self, load_path, agent_id, agent_dict):
+        args_sn = agent_dict[agent_id]['args_sn']
+        if args_sn.mac == "maven_mac" and args_sn.noise_bandit:
+            self.noise_distrib[agent_id].load_model(load_path)
+
     def setup(self, agent_dict, groups, preprocess):
         for k, v in agent_dict.items():
             self.new_batch[k] = partial(EpisodeBatch, v['scheme_buffer'],
@@ -558,10 +563,11 @@ class ParallelRunnerPopulation(ParallelRunner):
             if k != "n_episodes":
                 self.logger.log_stat(prefix + k + "_mean",
                                      v / stats["n_episodes"], time)
-        for k, v in custom_stats.items():
-            self.logger.log_stat(prefix + k, v, time)
+        if custom_stats is not None:
+            for k, v in custom_stats.items():
+                self.logger.log_stat(prefix + k, v, time)
 
-        custom_stats.clear()
+            custom_stats.clear()
         stats.clear()
 
     # def _update_noise_returns(self, returns, noise, stats, test_mode):
