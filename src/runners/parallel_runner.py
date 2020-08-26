@@ -54,6 +54,9 @@ class ParallelRunner:
         self.groups = groups
         self.preprocess = preprocess
 
+    def load_models(self, load_path, agent_id, agent_dict):
+        pass
+
     def get_env_info(self):
         return self.env_info
 
