@@ -247,6 +247,8 @@ def run_population_test(args, logger):
                     idx_team2 += 1
                 else:
                     load_factor_team2 += 1
+                runner.setup(agent_dict=agent_dict, groups=groups,
+                             preprocess=preprocess)
                 print("timestep_to_load", timestep_to_load1, timestep_to_load2)
                 model_path1 = os.path.join(
                     agent_dict[0]['args_sn'].checkpoint_path,
@@ -255,7 +257,7 @@ def run_population_test(args, logger):
                     "Loading model from {}".format(model_path1))
                 agent_dict[0]['learner'].load_models(model_path1)
                 agent_dict[0]['t_total'] = timestep_to_load1
-                runner.load_models(model_path1, idx_team1, agent_dict[0])
+                runner.load_models(model_path1, 0, agent_dict)
 
                 model_path2 = os.path.join(
                     agent_dict[1]['args_sn'].checkpoint_path,
@@ -264,10 +266,9 @@ def run_population_test(args, logger):
                     "Loading model from {}".format(model_path2))
                 agent_dict[1]['learner'].load_models(model_path2)
                 agent_dict[1]['t_total'] = timestep_to_load2
-                runner.load_models(model_path2, idx_team2, agent_dict[1])
+                runner.load_models(model_path2, 1, agent_dict)
 
-                runner.setup(agent_dict=agent_dict, groups=groups,
-                             preprocess=preprocess)
+
                 cur_tested = 0
                 while cur_tested < args.test_nepisode:
                     # Run for a whole episode at a time
@@ -285,6 +286,8 @@ def run_population_test(args, logger):
                     continue
                 else:
                     load_factor_team1 += 1
+                runner.setup(agent_dict=agent_dict, groups=groups,
+                             preprocess=preprocess)
 
                 print("timestep_to_load", timestep_to_load1, timestep_to_load1)
                 model_path1 = os.path.join(
@@ -294,6 +297,7 @@ def run_population_test(args, logger):
                     "Loading model from {}".format(model_path1))
                 agent_dict[0]['learner'].load_models(model_path1)
                 agent_dict[0]['t_total'] = timestep_to_load1
+                runner.load_models(model_path1, 0, agent_dict)
 
                 model_path2 = os.path.join(
                     agent_dict[1]['args_sn'].checkpoint_path,
@@ -303,8 +307,7 @@ def run_population_test(args, logger):
                 agent_dict[1]['learner'].load_models(model_path2)
                 agent_dict[1]['t_total'] = timestep_to_load1
 
-                runner.setup(agent_dict=agent_dict, groups=groups,
-                             preprocess=preprocess)
+
                 cur_tested = 0
                 while cur_tested < args.test_nepisode:
                     # Run for a whole episode at a time

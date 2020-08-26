@@ -140,7 +140,6 @@ def run_population(args, logger):
             scheme["noise"] = {"vshape": (agent_dict[k]['args_sn'].noise_dim,)}
 
         agent_dict[k]['scheme_buffer'] = scheme
-
     groups = {
         "agents": args.n_agents,
     }

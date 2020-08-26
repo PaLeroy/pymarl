@@ -112,4 +112,4 @@ class EZ_agent:
         torch.save(self.policy.state_dict(), "{}/ez_bandit_policy.th".format(path))
 
     def load_model(self, path):
-        self.policy.load_state_dict(torch.load("{}/agent.th".format(path), map_location=lambda storage, loc: storage))
+        self.policy.load_state_dict(torch.load("{}/ez_bandit_policy.th".format(path), map_location=lambda storage, loc: storage))
