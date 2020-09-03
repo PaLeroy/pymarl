@@ -357,23 +357,26 @@ class ParallelRunnerPopulation(ParallelRunner):
             env_info = final_env_infos[idx_match]
             custom_stats_team_1_dict = {
                 key: [val] for key, val in env_info.items() if
-                key.endswith("team_1_agent_0") or key.endswith(
+                key.endswith("custom_team_1") or key.endswith(
+                    "team_1_agent_0") or key.endswith(
                     "team_1_agent_1") or key.endswith("team_1_agent_2")
             }
             for key in list(env_info.keys()):
-                if key.endswith("team_1_agent_0") or key.endswith(
+                if key.endswith("custom_team_1") or key.endswith(
+                        "team_1_agent_0") or key.endswith(
                         "team_1_agent_1") or key.endswith("team_1_agent_2"):
                     del env_info[key]
 
             custom_stats_team_2_dict = {
                 key: [val] for key, val in env_info.items() if
-                key.endswith("team_2_agent_0") or key.endswith(
+                key.endswith("custom_team_2") or key.endswith(
+                    "team_2_agent_0") or key.endswith(
                     "team_2_agent_1") or key.endswith("team_2_agent_2")
             }
             for key in list(env_info.keys()):
                 if key.endswith("custom_team_2") or key.endswith(
                         "team_2_agent_0") or key.endswith(
-                    "team_2_agent_1") or key.endswith("team_2_agent_2"):
+                        "team_2_agent_1") or key.endswith("team_2_agent_2"):
                     del env_info[key]
 
             env_info_team1 = {
@@ -523,7 +526,7 @@ class ParallelRunnerPopulation(ParallelRunner):
                         noise_for_this_agent.append(
                             self.batches[id_match][1]['noise'][:])
                 init_states_for_this_agent = \
-                    th.stack(init_states_for_this_agent, dim=1)[0]
+                th.stack(init_states_for_this_agent, dim=1)[0]
                 noise_for_this_agent = th.stack(noise_for_this_agent, dim=1)[
                     0, 0]
                 time = self.agent_timer[team_id]
