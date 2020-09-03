@@ -20,5 +20,4 @@ learner: "q_learner"
 double_q: True
 mixer: "qmix"
 mixing_embed_dim: 32
-
 name: "qmix_smac_parallel"

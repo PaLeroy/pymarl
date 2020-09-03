@@ -1,6 +1,6 @@
 *.sh
 \.idea/
-3rdparty/
+src/3rdparty/
 env/
 results/
 

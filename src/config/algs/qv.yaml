@@ -22,4 +22,6 @@ double_q: False
 mixer: "vmix"
 mixing_embed_dim: 32
 
+
+use_cuda: True
 name: "vmix"

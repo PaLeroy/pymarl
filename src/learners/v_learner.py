@@ -70,7 +70,6 @@ class VLearner:
         for t in range(batch.max_seq_length):
             v_outs = self.v_forward(batch, t=t)
             v_agent_out.append(v_outs)
-        v_agent_out_for_q = th.stack(v_agent_out[1:], dim=1)
         v_agent_out_for_v = th.stack(v_agent_out[:-1], dim=1)
 
         # Calculate target V-Values
@@ -84,20 +83,15 @@ class VLearner:
         # Max over target Q-Values
         chosen_action_qvals = self.mixer(chosen_action_qvals,
                                          batch["state"][:, :-1])
-        v_agent_out_for_q = self.v_mixer(v_agent_out_for_q, batch["state"][:, 1:])
         v_agent_out_for_v = self.v_mixer(v_agent_out_for_v, batch["state"][:, :-1])
         target_mv_agent_out = self.target_v_mixer(target_mv_agent_out, batch["state"][:, 1:])
-
-        # Calculate 1-step Q-Learning targets
-        targets_q = rewards + self.args.gamma * (
-                1 - terminated) * v_agent_out_for_q
 
         # Calculte 1-step V
         targets_v = rewards + self.args.gamma * (
                 1 - terminated) * target_mv_agent_out
 
         # Td-error
-        td_error_q = (chosen_action_qvals - targets_q.detach())
+        td_error_q = (chosen_action_qvals - targets_v.detach())
         td_error_v = (v_agent_out_for_v - targets_v.detach())
 
         mask_q = mask.expand_as(td_error_q)
@@ -139,8 +133,8 @@ class VLearner:
                                  (chosen_action_qvals * mask).sum().item() / (
                                          mask_elems * self.args.n_agents),
                                  t_env)
-            self.logger.log_stat("q_target_mean",
-                                 (targets_q * mask).sum().item() / (
+            self.logger.log_stat("v_taken_mean",
+                                 (v_agent_out_for_v * mask).sum().item() / (
                                          mask_elems * self.args.n_agents),
                                  t_env)
             self.logger.log_stat("v_target_mean",
@@ -161,7 +155,7 @@ class VLearner:
 
         self.mixer.cuda()
         self.v_mixer.cuda()
-        self.target_v_agent.cuda()
+        self.target_v_mixer.cuda()
 
     def save_models(self, path):
         self.mac.save_models(path)
