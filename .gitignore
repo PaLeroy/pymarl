@@ -7,3 +7,7 @@ results/
 __pycache__/
 
 SMAC\.egg-info/
+
+src/envs/custom_env/
+
+src/config/envs/custom.yaml
