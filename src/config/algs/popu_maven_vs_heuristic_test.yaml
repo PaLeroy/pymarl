@@ -5,7 +5,7 @@
 runner_function: "population"
 runner: "parallel_runner_population"
 batch_size_run: 8 # Number of env at the same time
-name: "population_test_vs_heuristic"
+name: "population_test_maven_vs_heuristic"
 use_cuda: False
 
 load_timesteps_spacing: 200000 #nb of timesteps between two tests

@@ -7,3 +7,5 @@
 ./launch_tests_duo.sh iql
 ./launch_tests.sh iac
 ./launch_tests_duo.sh iac
+./launch_tests.sh maven
+./launch_tests_duo.sh maven
