@@ -4,6 +4,8 @@ import pprint
 import time
 import threading
 import torch as th
+import multiprocessing
+from joblib import Parallel, delayed
 from types import SimpleNamespace as SN
 from utils.logging import Logger
 from utils.timehelper import time_left, time_str
@@ -17,6 +19,7 @@ from components.episode_buffer import ReplayBuffer
 from components.transforms import OneHot
 from components.episode_buffer import ReplayBufferPopulation
 
+num_cores = multiprocessing.cpu_count()
 
 def run(_run, _config, _log):
     # check args sanity
@@ -68,6 +71,8 @@ def run(_run, _config, _log):
 
     # Making sure framework really exits
     os._exit(os.EX_OK)
+
+
 
 
 def evaluate_sequential(args, runner):
@@ -249,25 +254,53 @@ def run_population(args, logger):
         min_played_times = min(played_times)
         list_agent_can_sample = buffer.can_sample(agent_dict)
         print("aze",list_agent_can_sample, list_episode_matches)
-        list_agent_can_sample = [j for i in list_episode_matches for j in i if j in list_agent_can_sample]
-        if list_agent_can_sample:
-            for agent_id in list_agent_can_sample:
-                # Train agents that can be trained
-                episode_sample = buffer.sample(agent_id, agent_dict)
-                # Truncate batch to only filled timesteps
-                max_ep_t = episode_sample.max_t_filled()
-                episode_sample = episode_sample[:, :max_ep_t]
+        # update only the ones that just played
+        list_agent_can_sample = list(set([j for i in list_episode_matches for j in i if j in list_agent_can_sample]))
+        print("filtered_", list_agent_can_sample)
 
-                if episode_sample.device != args.device:
-                    episode_sample.to(args.device)
-                agent_dict[agent_id]['learner'].train(episode_sample,
-                                                      agent_dict[agent_id][
-                                                          't_total'],
-                                                      agent_dict[agent_id][
-                                                          'episode'])
+        if list_agent_can_sample:
+            if args.parallel_train:
+                episode_sampless=[]
+                t_totalss=[]
+                episodess=[]
+                for agent_id in list_agent_can_sample:
+                    # Train agents that can be trained
+                    episode_sample = buffer.sample(agent_id, agent_dict)
+                    # Truncate batch to only filled timesteps
+                    max_ep_t = episode_sample.max_t_filled()
+                    episode_sample = episode_sample[:, :max_ep_t]
+
+                    if episode_sample.device != args.device:
+                        episode_sample.to(args.device)
+                    episode_sampless.append(episode_sample)
+                    t_totalss.append(agent_dict[agent_id]['t_total'])
+                    episodess.append(agent_dict[agent_id]['episode'])
+                def train_parallel(learner, episode_sample, t_tot, episode):
+                    learner.train(episode_sample, t_tot, episode)
+
+                Parallel(n_jobs=num_cores)(delayed(train_parallel)
+                                           (agent_dict[agent_id]['learner'], episode_sampless[idx],
+                                            t_totalss[idx], episodess[idx])
+                                           for idx, agent_id in enumerate(list_agent_can_sample))
+            else:
+                for agent_id in list_agent_can_sample:
+                    # Train agents that can be trained
+                    episode_sample = buffer.sample(agent_id, agent_dict)
+                    # Truncate batch to only filled timesteps
+                    max_ep_t = episode_sample.max_t_filled()
+                    episode_sample = episode_sample[:, :max_ep_t]
+
+                    if episode_sample.device != args.device:
+                        episode_sample.to(args.device)
+                    agent_dict[agent_id]['learner'].train(episode_sample,
+                                                          agent_dict[agent_id][
+                                                              't_total'],
+                                                          agent_dict[agent_id][
+                                                              'episode'])
         for agent_id, dict___ in agent_dict.items():
             if dict___['args_sn'].save_model \
                     and (dict___['t_total'] - dict___['model_save_time']
+                         >= dict___['args_sn'].save_model_interval
                          >= dict___['args_sn'].save_model_interval
                          or dict___['model_save_time'] == 0):
                 agent_dict[agent_id]['model_save_time'] \

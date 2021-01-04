@@ -16,6 +16,7 @@ t_max: 10000 # Stop running after this many timesteps
 use_cuda: True # Use gpu by default unless it isn't available
 buffer_cpu_only: True # If true we won't keep all of the replay buffer in vram
 multi: False # If the environment consist of two teams competing
+parallel_train: False # If multiple agent, learn in parrallel.
 
 
 # --- Logging options ---

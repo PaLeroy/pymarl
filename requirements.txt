@@ -10,6 +10,7 @@ future==0.16.0
 idna==2.7
 imageio==2.4.1
 jsonpickle==0.9.6
+joblib==0.13.2
 kiwisolver==1.0.1
 matplotlib==3.0.0
 mock==2.0.0
