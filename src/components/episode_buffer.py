@@ -315,14 +315,14 @@ class ReplayBufferPopulation:
 
     def can_sample(self, agent_dict):
         """ Returns the list of agent_id that can sample."""
-        list_agent_can_cample = []
+        list_agent_can_sample = []
         for agent_id in self.agent_ids:
             if agent_dict[agent_id]['args_sn'].learner == "do_not_learn":
                 continue
             if self._can_sample(agent_id,
                                 agent_dict[agent_id]['args_sn'].batch_size):
-                list_agent_can_cample.append(agent_id)
-        return list_agent_can_cample
+                list_agent_can_sample.append(agent_id)
+        return list_agent_can_sample
 
     def _can_sample(self, agent_id, batch_size):
         return self.buffers[agent_id].can_sample(batch_size)

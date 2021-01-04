@@ -248,6 +248,8 @@ def run_population(args, logger):
         played_times = [v['t_total'] for _, v in agent_dict.items()]
         min_played_times = min(played_times)
         list_agent_can_sample = buffer.can_sample(agent_dict)
+        print("aze",list_agent_can_sample, list_episode_matches)
+        list_agent_can_sample = [j for i in list_episode_matches for j in i if j in list_agent_can_sample]
         if list_agent_can_sample:
             for agent_id in list_agent_can_sample:
                 # Train agents that can be trained

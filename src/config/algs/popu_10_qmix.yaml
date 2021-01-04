@@ -4,8 +4,8 @@
 # Global parameter, indep of agent type
 runner_function: "population"
 runner: "parallel_runner_population"
-batch_size_run: 16 # Number of env at the same time
-name: "population_5"
+batch_size_run: 4 # Number of env at the same time
+name: "population_10_qmix"
 use_cuda: False
 
 matchmaking: "random"
@@ -15,7 +15,7 @@ save_model: True # Save the models to disk
 
 use_tensorboard: True
 
-n_agent_type: 5
+n_agent_type: 1
 
 log_interval: 20000
 runner_log_interval: 20000
@@ -66,7 +66,7 @@ agent_type_1:
   obs_last_action: True # Include the agent's last action (one_hot) in the observation
 
   # --- Logging options ---
-  save_model: [True, True, True] # Save the models to disk
-  save_model_interval: [20000, 20000, 20000] # Save models after this many timesteps
-  checkpoint_path: ["", "", ""] # Load a checkpoint from this path
-  load_step: [0, 0, 0] # Load model trained on this many timesteps (0 if choose max possible)
+  save_model: [True, True, True, True, True, True, True, True, True, True] # Save the models to disk
+  save_model_interval: [20000, 20000, 20000, 20000, 20000, 20000, 20000, 20000, 20000, 20000] # Save models after this many timesteps
+  checkpoint_path: ["", "", "", "", "", "", "", "", "", ""] # Load a checkpoint from this path
+  load_step: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0] # Load model trained on this many timesteps (0 if choose max possible)
