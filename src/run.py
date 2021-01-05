@@ -253,10 +253,8 @@ def run_population(args, logger):
         played_times = [v['t_total'] for _, v in agent_dict.items()]
         min_played_times = min(played_times)
         list_agent_can_sample = buffer.can_sample(agent_dict)
-        print("aze",list_agent_can_sample, list_episode_matches)
         # update only the ones that just played
         list_agent_can_sample = list(set([j for i in list_episode_matches for j in i if j in list_agent_can_sample]))
-        print("filtered_", list_agent_can_sample)
 
         if list_agent_can_sample:
             if args.parallel_train:
@@ -321,6 +319,7 @@ def run_population(args, logger):
         if (min_played_times - last_test_T) / args.test_interval >= 1.0:
             logger.console_logger.info(
                 "t_env: {} / {}".format(min_played_times, args.t_max))
+            print("test")
             last_test_T = min_played_times
             cpt = 0
             while cpt < args.test_nepisode:

@@ -4,7 +4,7 @@
 # Global parameter, indep of agent type
 runner_function: "population"
 runner: "parallel_runner_population"
-batch_size_run: 4 # Number of env at the same time
+batch_size_run: 8 # Number of env at the same time
 name: "population_5_qmix"
 use_cuda: False
 
@@ -23,8 +23,8 @@ runner_log_interval: 20000
 learner_log_interval: 20000
 
 t_max: 20050000
-test_interval: 20000
-test_nepisode: 0
+test_interval: -1
+test_nepisode: 20
 test_greedy: False
 
 
