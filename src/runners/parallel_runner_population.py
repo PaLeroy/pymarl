@@ -525,6 +525,8 @@ class ParallelRunnerPopulation(ParallelRunner):
                             append(self.batches[id_match][1]["state"][:, 0])
                         noise_for_this_agent.append(
                             self.batches[id_match][1]['noise'][:])
+                if not init_states_for_this_agent:
+                    continue
                 init_states_for_this_agent = \
                 th.stack(init_states_for_this_agent, dim=1)[0]
                 noise_for_this_agent = th.stack(noise_for_this_agent, dim=1)[
